@@ -55,10 +55,22 @@ export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = []
           
           {/* Mock Mode Warning */}
           {isMockMode && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div className="text-xs text-amber-800">
-                <strong>Mock Mode:</strong> Trip sharing only works within the same browser. To share trips across different users/devices, you need to set up Supabase backend.
+            <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl">
+              <div className="flex items-start gap-3 mb-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-amber-900 mb-1">⚠️ Mock Mode Active</h4>
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    This app is running in <strong>demo mode</strong> using browser storage. Trip data <strong>cannot be shared</strong> across different browsers or devices.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white/60 rounded-lg p-3 text-xs text-amber-900">
+                <p className="font-semibold mb-2">📋 To share trips with friends:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Set up Supabase backend (see MOCK_MODE_LIMITATIONS.md)</li>
+                  <li>Or use the same browser/device for all users (not practical)</li>
+                </ol>
               </div>
             </div>
           )}
