@@ -51,19 +51,22 @@ COMMENT ON FUNCTION is_trip_owner IS 'Returns true if current user is the owner 
 -- POLICIES: trips
 -- ============================================================================
 
--- Members can view trips they belong to
+-- Members can view trips they belong to (or if they created it)
+DROP POLICY IF EXISTS "Members can view their trips" ON trips;
 CREATE POLICY "Members can view their trips"
     ON trips
     FOR SELECT
-    USING (is_trip_member(id));
+    USING (is_trip_member(id) OR created_by = auth.uid());
 
 -- Any authenticated user can create a trip
+DROP POLICY IF EXISTS "Authenticated users can create trips" ON trips;
 CREATE POLICY "Authenticated users can create trips"
     ON trips
     FOR INSERT
     WITH CHECK (auth.uid() IS NOT NULL AND created_by = auth.uid());
 
 -- Only trip owners can update trip details
+DROP POLICY IF EXISTS "Owners can update their trips" ON trips;
 CREATE POLICY "Owners can update their trips"
     ON trips
     FOR UPDATE
@@ -71,6 +74,7 @@ CREATE POLICY "Owners can update their trips"
     WITH CHECK (is_trip_owner(id));
 
 -- Only trip owners can delete trips
+DROP POLICY IF EXISTS "Owners can delete their trips" ON trips;
 CREATE POLICY "Owners can delete their trips"
     ON trips
     FOR DELETE
@@ -81,24 +85,45 @@ CREATE POLICY "Owners can delete their trips"
 -- ============================================================================
 
 -- Members can view other members of their trips
+DROP POLICY IF EXISTS "Members can view trip membership" ON trip_members;
 CREATE POLICY "Members can view trip membership"
     ON trip_members
     FOR SELECT
     USING (is_trip_member(trip_id));
 
--- Trip owners can add members
+-- Trip owners can add members (or creators can add the first members/owners)
+DROP POLICY IF EXISTS "Owners can add members" ON trip_members;
 CREATE POLICY "Owners can add members"
     ON trip_members
     FOR INSERT
-    WITH CHECK (is_trip_owner(trip_id));
+    WITH CHECK (
+        is_trip_owner(trip_id) 
+        OR EXISTS (
+            SELECT 1 FROM trips 
+            WHERE id = trip_id 
+              AND created_by = auth.uid()
+        )
+    );
+
+-- Anyone can join a trip as a member
+DROP POLICY IF EXISTS "Anyone can join a trip" ON trip_members;
+CREATE POLICY "Anyone can join a trip"
+    ON trip_members
+    FOR INSERT
+    WITH CHECK (
+        auth.uid() = user_id 
+        AND role = 'member'
+    );
 
 -- Trip owners can remove members (except themselves)
+DROP POLICY IF EXISTS "Owners can remove members" ON trip_members;
 CREATE POLICY "Owners can remove members"
     ON trip_members
     FOR DELETE
     USING (is_trip_owner(trip_id) AND user_id != auth.uid());
 
 -- Members can remove themselves from trips
+DROP POLICY IF EXISTS "Members can leave trips" ON trip_members;
 CREATE POLICY "Members can leave trips"
     ON trip_members
     FOR DELETE
@@ -109,18 +134,21 @@ CREATE POLICY "Members can leave trips"
 -- ============================================================================
 
 -- Members can view itinerary items for their trips
+DROP POLICY IF EXISTS "Members can view itinerary" ON itinerary_items;
 CREATE POLICY "Members can view itinerary"
     ON itinerary_items
     FOR SELECT
     USING (is_trip_member(trip_id));
 
 -- Members can add itinerary items to their trips
+DROP POLICY IF EXISTS "Members can add itinerary items" ON itinerary_items;
 CREATE POLICY "Members can add itinerary items"
     ON itinerary_items
     FOR INSERT
     WITH CHECK (is_trip_member(trip_id) AND created_by = auth.uid());
 
 -- Creators can update their own itinerary items
+DROP POLICY IF EXISTS "Creators can update their items" ON itinerary_items;
 CREATE POLICY "Creators can update their items"
     ON itinerary_items
     FOR UPDATE
@@ -128,12 +156,14 @@ CREATE POLICY "Creators can update their items"
     WITH CHECK (created_by = auth.uid());
 
 -- Creators can delete their own itinerary items
+DROP POLICY IF EXISTS "Creators can delete their items" ON itinerary_items;
 CREATE POLICY "Creators can delete their items"
     ON itinerary_items
     FOR DELETE
     USING (created_by = auth.uid());
 
 -- Trip owners can delete any itinerary item in their trips
+DROP POLICY IF EXISTS "Owners can delete any itinerary item" ON itinerary_items;
 CREATE POLICY "Owners can delete any itinerary item"
     ON itinerary_items
     FOR DELETE
@@ -144,18 +174,21 @@ CREATE POLICY "Owners can delete any itinerary item"
 -- ============================================================================
 
 -- Members can view expenses for their trips
+DROP POLICY IF EXISTS "Members can view expenses" ON expenses;
 CREATE POLICY "Members can view expenses"
     ON expenses
     FOR SELECT
     USING (is_trip_member(trip_id));
 
 -- Members can add expenses to their trips
+DROP POLICY IF EXISTS "Members can add expenses" ON expenses;
 CREATE POLICY "Members can add expenses"
     ON expenses
     FOR INSERT
     WITH CHECK (is_trip_member(trip_id) AND paid_by = auth.uid());
 
 -- Payers can update their own expenses
+DROP POLICY IF EXISTS "Payers can update their expenses" ON expenses;
 CREATE POLICY "Payers can update their expenses"
     ON expenses
     FOR UPDATE
@@ -163,12 +196,14 @@ CREATE POLICY "Payers can update their expenses"
     WITH CHECK (paid_by = auth.uid());
 
 -- Payers can delete their own expenses
+DROP POLICY IF EXISTS "Payers can delete their expenses" ON expenses;
 CREATE POLICY "Payers can delete their expenses"
     ON expenses
     FOR DELETE
     USING (paid_by = auth.uid());
 
 -- Trip owners can delete any expense in their trips
+DROP POLICY IF EXISTS "Owners can delete any expense" ON expenses;
 CREATE POLICY "Owners can delete any expense"
     ON expenses
     FOR DELETE
@@ -179,6 +214,7 @@ CREATE POLICY "Owners can delete any expense"
 -- ============================================================================
 
 -- Members can view splits for expenses in their trips
+DROP POLICY IF EXISTS "Members can view splits" ON expense_splits;
 CREATE POLICY "Members can view splits"
     ON expense_splits
     FOR SELECT
@@ -192,6 +228,7 @@ CREATE POLICY "Members can view splits"
     );
 
 -- Expense payers can create splits when adding an expense
+DROP POLICY IF EXISTS "Payers can create splits" ON expense_splits;
 CREATE POLICY "Payers can create splits"
     ON expense_splits
     FOR INSERT
@@ -205,6 +242,7 @@ CREATE POLICY "Payers can create splits"
     );
 
 -- Users can mark their own splits as settled
+DROP POLICY IF EXISTS "Users can settle their own splits" ON expense_splits;
 CREATE POLICY "Users can settle their own splits"
     ON expense_splits
     FOR UPDATE
@@ -212,6 +250,7 @@ CREATE POLICY "Users can settle their own splits"
     WITH CHECK (user_id = auth.uid());
 
 -- Expense payers can update splits for their expenses
+DROP POLICY IF EXISTS "Payers can update splits" ON expense_splits;
 CREATE POLICY "Payers can update splits"
     ON expense_splits
     FOR UPDATE
@@ -225,6 +264,7 @@ CREATE POLICY "Payers can update splits"
     );
 
 -- Expense payers can delete splits for their expenses
+DROP POLICY IF EXISTS "Payers can delete splits" ON expense_splits;
 CREATE POLICY "Payers can delete splits"
     ON expense_splits
     FOR DELETE
@@ -253,10 +293,4 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 -- ============================================================================
 -- RLS POLICIES COMPLETE
--- ============================================================================
--- Security model summary:
--- - Users can only view trips they're members of
--- - Trip owners have full control over their trips
--- - Members can contribute itinerary items and expenses
--- - Users can only settle their own expense splits
 -- ============================================================================

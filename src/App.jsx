@@ -124,7 +124,6 @@ function App() {
       
       if (inviteTripId && currentUser) {
         try {
-          // First, verify the trip exists
           let tripExists = false;
           let tripData = null;
           
@@ -141,33 +140,7 @@ function App() {
               window.history.replaceState({}, '', url);
               return;
             }
-          } else {
-            const { data: fetchedTrip, error: tripErr } = await supabase
-              .from('trips')
-              .select('id, name, destination, start_date, end_date, total_budget')
-              .eq('id', inviteTripId)
-              .single();
-            tripExists = !tripErr && fetchedTrip;
-            tripData = fetchedTrip;
-          }
 
-          if (!tripExists) {
-            alert('This trip invitation link is invalid or the trip no longer exists.');
-            const url = new URL(window.location.href);
-            url.searchParams.delete('invite');
-            window.history.replaceState({}, '', url);
-            return;
-          }
-
-          if (!isMockMode) {
-            // Add user to the trip members
-            const { error: joinErr } = await supabase.from('trip_members').insert([{
-              trip_id: inviteTripId,
-              user_id: currentUser.id,
-              role: 'member'
-            }]);
-            if (joinErr && joinErr.code !== '23505') throw joinErr;
-          } else {
             // Mock mode join
             const existingMemberRecord = MOCK_TRIP_MEMBERS.find(m => m.trip_id === inviteTripId);
             if (existingMemberRecord) {
@@ -181,6 +154,43 @@ function App() {
                 members: [currentUser.name],
               });
               saveMockData();
+            }
+          } else {
+            // First add the user to trip_members so they pass RLS SELECT policies on the trip
+            const { error: joinErr } = await supabase.from('trip_members').insert([{
+              trip_id: inviteTripId,
+              user_id: currentUser.id,
+              role: 'member'
+            }]);
+            
+            if (joinErr) {
+              if (joinErr.code === '23503') {
+                // Foreign key constraint violation (trip does not exist)
+                tripExists = false;
+              } else if (joinErr.code === '23505') {
+                // Unique constraint violation (already a member of this trip)
+                tripExists = true;
+              } else {
+                // Other database errors
+                throw joinErr;
+              }
+            } else {
+              tripExists = true;
+            }
+
+            if (tripExists) {
+              // Now they are a member, they can fetch trip metadata
+              const { data: fetchedTrip, error: tripErr } = await supabase
+                .from('trips')
+                .select('id, name, destination, start_date, end_date, total_budget')
+                .eq('id', inviteTripId)
+                .single();
+              
+              if (tripErr) {
+                tripExists = false;
+              } else {
+                tripData = fetchedTrip;
+              }
             }
           }
           
@@ -222,6 +232,19 @@ function App() {
 
   const fetchTripMeta = async () => {
     if (!activeTripId) return;
+
+    // Validate UUID format when not in mock mode to handle legacy mock IDs in localStorage
+    if (!isMockMode) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(activeTripId)) {
+        console.warn('Wandr: Detected invalid activeTripId UUID, clearing session:', activeTripId);
+        localStorage.removeItem('wandr_active_trip_id');
+        setActiveTripId(null);
+        setTripMeta(null);
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     try {
