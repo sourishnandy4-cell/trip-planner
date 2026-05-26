@@ -73,8 +73,11 @@ export const FinanceAI = ({ tripId, tripName, tripDestination, totalBudget, curr
 
       const itinerary = itineraryRes.data || [];
       const expenses = expensesRes.data || [];
-      const members = membersRes.data || [];
+      const rawMembers = membersRes.data || [];
       const balances = balancesRes.data || [];
+
+      // Normalise members — expenseService returns {id, name} objects in both modes
+      const members = rawMembers.map(m => (typeof m === 'string' ? m : m.name)).filter(Boolean);
 
       // Format Itinerary
       const formattedItinerary = itinerary.map(item => 

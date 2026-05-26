@@ -1,29 +1,48 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Users, Copy, Check, AlertCircle } from 'lucide-react';
 import { isMockMode } from '../lib/supabaseClient';
+import { MOCK_TRIP_MEMBERS, saveMockData } from '../lib/mockDatabase';
 
 export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = [] }) => {
   const [friendName, setFriendName] = useState('');
   const [friends, setFriends] = useState(currentFriends);
   const [copied, setCopied] = useState(false);
 
-  // Generate shareable link
-  const shareLink = `${window.location.origin}?invite=${tripId}`;
+  // Generate shareable link — include the full pathname so /trip-planner/ is preserved on GitHub Pages
+  const shareLink = `${window.location.origin}${window.location.pathname}?invite=${tripId}`;
 
   const handleAddFriend = (e) => {
     e.preventDefault();
-    if (friendName.trim() && !friends.includes(friendName.trim())) {
-      const updated = [...friends, friendName.trim()];
-      setFriends(updated);
-      localStorage.setItem(`trip_${tripId}_friends`, JSON.stringify(updated));
-      setFriendName('');
+    const trimmed = friendName.trim();
+    if (!trimmed || friends.includes(trimmed)) return;
+    const updated = [...friends, trimmed];
+    setFriends(updated);
+
+    // Persist to MOCK_TRIP_MEMBERS so the rest of the app reflects the change
+    if (isMockMode) {
+      const entry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === tripId);
+      if (entry) {
+        if (!entry.members.includes(trimmed)) entry.members.push(trimmed);
+      } else {
+        MOCK_TRIP_MEMBERS.push({ trip_id: tripId, members: [trimmed] });
+      }
+      saveMockData();
     }
+    setFriendName('');
   };
 
   const handleRemoveFriend = (name) => {
     const updated = friends.filter(f => f !== name);
     setFriends(updated);
-    localStorage.setItem(`trip_${tripId}_friends`, JSON.stringify(updated));
+
+    // Keep MOCK_TRIP_MEMBERS in sync
+    if (isMockMode) {
+      const entry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === tripId);
+      if (entry) {
+        entry.members = entry.members.filter(m => m !== name);
+        saveMockData();
+      }
+    }
   };
 
   const handleCopyLink = () => {

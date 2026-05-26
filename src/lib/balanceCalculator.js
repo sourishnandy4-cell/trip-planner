@@ -1,10 +1,20 @@
 import { supabase, isMockMode } from './supabaseClient';
 import { mockCalculateNetBalances } from './mockDatabase';
 
-const USER_DISPLAY_NAMES = {
-  '11111111-1111-1111-1111-111111111111': 'Sarah',
-  '22222222-2222-2222-2222-222222222222': 'Mike',
-  '33333333-3333-3333-3333-333333333333': 'Chloe',
+/**
+ * Build a UUID → display-name map from the logged-in user's stored profile
+ * plus any overrides baked in. Falls back to a short UUID prefix.
+ */
+const buildDisplayNameMap = () => {
+  const map = {};
+  try {
+    const raw = localStorage.getItem('wandr_user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.id && u?.name) map[u.id] = u.name;
+    }
+  } catch (_) {}
+  return map;
 };
 
 /**
@@ -71,10 +81,11 @@ export const calculateNetBalances = async (tripId) => {
   }
 
   // Step 5: format for UI — replace UUIDs with display names
+  const displayNames = buildDisplayNameMap();
   const balances = Object.entries(netMap).map(([key, amount]) => {
     const [fromId, toId] = key.split('→');
-    const from = USER_DISPLAY_NAMES[fromId] || fromId.substring(0, 8);
-    const to = USER_DISPLAY_NAMES[toId] || toId.substring(0, 8);
+    const from = displayNames[fromId] || fromId.substring(0, 8);
+    const to = displayNames[toId] || toId.substring(0, 8);
     return { from, to, amount: parseFloat(amount.toFixed(2)) };
   });
 

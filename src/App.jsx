@@ -114,7 +114,7 @@ function App() {
     if (currentUser) {
       fetchExistingTrips();
     }
-  }, [currentUser, activeTripId]);
+  }, [currentUser]);
 
   // Handle Invite Link Join Logic
   useEffect(() => {
@@ -340,6 +340,18 @@ function App() {
         localStorage.setItem('wandr_active_trip_id', generatedId);
         setActiveTripId(generatedId);
       } else {
+        const { data: sessionData } = await supabase.auth.getSession();
+        console.log("Current User ID:", currentUser?.id);
+        console.log("Supabase Session:", sessionData.session ? "Active" : "Null");
+        if (!sessionData.session) {
+          throw new Error("You are not properly authenticated with Supabase. Please sign out and sign in again.");
+        }
+        
+        if (sessionData.session.user.id !== currentUser?.id) {
+           console.error("Mismatch: ", sessionData.session.user.id, " !== ", currentUser?.id);
+           throw new Error("Your session is invalid or out of sync. Please sign out and sign in again.");
+        }
+
         const { data: tripData, error: insertErr } = await supabase
           .from('trips')
           .insert([{
@@ -376,6 +388,7 @@ function App() {
       setNewStartDate('');
       setNewEndDate('');
       setNewBudget('');
+      setNewTripMembers(currentUser?.name || '');
     } catch (err) {
       setOnboardingError(err.message || 'Failed to initialize trip record.');
     } finally {

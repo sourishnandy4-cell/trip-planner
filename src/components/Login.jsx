@@ -104,6 +104,10 @@ export const Login = ({ onLoginSuccess }) => {
             }
           });
           if (signUpErr) throw signUpErr;
+
+          if (!data.session) {
+            throw new Error('Please check your email to verify your account, or try signing in if you already have an account.');
+          }
           
           const userProfile = {
             id: data.user.id,

@@ -154,7 +154,7 @@ export const mockCalculateNetBalances = async (tripId) => {
 
 export const mockAddItineraryItem = async (tripId, item) => {
   const newItem = {
-    id: String(MOCK_ITINERARY_ITEMS.length + 1),
+    id: 'item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     trip_id: tripId,
     start_time: item.start_time,
     title: item.title,
@@ -168,7 +168,7 @@ export const mockAddItineraryItem = async (tripId, item) => {
 };
 
 export const mockAddExpense = async (tripId, expense, splits) => {
-  const newExpenseId = 'e' + String(MOCK_EXPENSES.length + 1);
+  const newExpenseId = 'exp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
   const newExpense = {
     id: newExpenseId,
     trip_id: tripId,
@@ -182,7 +182,7 @@ export const mockAddExpense = async (tripId, expense, splits) => {
 
   splits.forEach((split) => {
     MOCK_SPLITS.push({
-      id: 's' + String(MOCK_SPLITS.length + 1),
+      id: 'spl-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
       expense_id: newExpenseId,
       user_id: split.user_id,
       owed_amount: Number(split.owed_amount),
