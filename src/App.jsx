@@ -126,15 +126,29 @@ function App() {
         try {
           // First, verify the trip exists
           let tripExists = false;
+          let tripData = null;
+          
           if (isMockMode) {
             tripExists = MOCK_TRIPS.some(t => t.id === inviteTripId);
+            tripData = MOCK_TRIPS.find(t => t.id === inviteTripId);
+            
+            // If trip doesn't exist in this user's localStorage, it means they're joining from another user
+            // In mock mode, we can't share data across browsers, so show an error
+            if (!tripExists) {
+              alert('⚠️ Mock Mode Limitation: This trip was created by another user. In mock mode (localStorage), trips cannot be shared across different browsers or users.\n\nTo enable real trip sharing:\n1. Set up Supabase backend\n2. Or ask the trip creator to share trip details manually');
+              const url = new URL(window.location.href);
+              url.searchParams.delete('invite');
+              window.history.replaceState({}, '', url);
+              return;
+            }
           } else {
-            const { data: tripData, error: tripErr } = await supabase
+            const { data: fetchedTrip, error: tripErr } = await supabase
               .from('trips')
-              .select('id')
+              .select('id, name, destination, start_date, end_date, total_budget')
               .eq('id', inviteTripId)
               .single();
-            tripExists = !tripErr && tripData;
+            tripExists = !tripErr && fetchedTrip;
+            tripData = fetchedTrip;
           }
 
           if (!tripExists) {

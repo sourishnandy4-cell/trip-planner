@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Users, Copy, Check } from 'lucide-react';
+import { X, UserPlus, Users, Copy, Check, AlertCircle } from 'lucide-react';
+import { isMockMode } from '../lib/supabaseClient';
 
 export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = [] }) => {
   const [friendName, setFriendName] = useState('');
@@ -51,6 +52,16 @@ export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = []
           <p className="text-sm text-gray-600 mb-3">
             Share this trip: <span className="font-semibold">{tripName}</span>
           </p>
+          
+          {/* Mock Mode Warning */}
+          {isMockMode && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-800">
+                <strong>Mock Mode:</strong> Trip sharing only works within the same browser. To share trips across different users/devices, you need to set up Supabase backend.
+              </div>
+            </div>
+          )}
           
           {/* Share Link */}
           <div className="flex gap-2 mb-4">
