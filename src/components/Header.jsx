@@ -1,8 +1,46 @@
 import React, { useState } from 'react';
-import { Search, Bell, ChevronDown } from 'lucide-react';
+import { Search, Bell, ChevronDown, BellOff } from 'lucide-react';
 
-export const Header = ({ tripName, dateRange, user }) => {
+export const Header = ({ tripName, dateRange, user, onLogout, onSwitchTrip, onProfileClick }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 'n1',
+      title: 'Flight Departure schedule',
+      text: 'Flight IB3014 is departing on time at 10:45 AM from Gate 4.',
+      unread: true,
+      time: '1h ago'
+    },
+    {
+      id: 'n2',
+      title: 'New Expense Splitting',
+      text: 'Sarah J. logged a new bill split. Your share has been calculated.',
+      unread: true,
+      time: '3h ago'
+    },
+    {
+      id: 'n3',
+      title: 'Packing Checklist Alert',
+      text: 'Remember to verify essential passport copies and travel adapters before departure.',
+      unread: true,
+      time: '1d ago'
+    }
+  ]);
+
+  const hasUnread = notifications.some(n => n.unread);
+
+  const handleMarkAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+  };
+
+  const handleToggleRead = (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: !n.unread } : n));
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+  };
 
   return (
     <header className="bg-white shadow-sm rounded-2xl p-4 mb-6">
@@ -32,20 +70,93 @@ export const Header = ({ tripName, dateRange, user }) => {
         {/* Right: Notifications & User */}
         <div className="flex items-center gap-4">
           {/* Notification Bell */}
-          <button className="relative p-2 hover:bg-gray-100 rounded-full transition-all duration-200">
-            <Bell className="w-5 h-5 text-gray-600" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                setShowDropdown(false);
+              }}
+              className="relative p-2 hover:bg-gray-100 rounded-full transition-all duration-200"
+              title="Notifications"
+            >
+              <Bell className="w-5 h-5 text-gray-600" />
+              {hasUnread && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white animate-pulse"></span>
+              )}
+            </button>
+
+            {/* Notifications Dropdown Menu */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-150 py-3.5 z-50 animate-fadeIn text-left font-sans">
+                <div className="flex items-center justify-between px-4 pb-2 border-b border-gray-100 mb-1">
+                  <span className="font-extrabold text-sm text-primary tracking-tight">Trip Alerts</span>
+                  {notifications.length > 0 && (
+                    <div className="flex gap-2 text-[10px] font-bold text-accent">
+                      <button onClick={handleMarkAllRead} className="hover:underline">Mark all read</button>
+                      <span>•</span>
+                      <button onClick={handleClearAll} className="hover:text-red-500">Clear</button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="max-h-[260px] overflow-y-auto divide-y divide-gray-50">
+                  {notifications.length === 0 ? (
+                    <div className="py-8 text-center text-gray-400 space-y-1.5 px-4 flex flex-col items-center">
+                      <BellOff className="w-7 h-7 text-gray-300 mb-1" />
+                      <h4 className="font-bold text-xs text-primary">All Caught Up!</h4>
+                      <p className="text-[10px] text-gray-400 font-medium">No active alerts for this journey.</p>
+                    </div>
+                  ) : (
+                    notifications.map(n => (
+                      <div 
+                        key={n.id} 
+                        onClick={() => handleToggleRead(n.id)}
+                        className={`p-3.5 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 relative ${
+                          n.unread ? 'bg-slate-50/50' : ''
+                        }`}
+                      >
+                        {n.unread && (
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full ring-2 ring-white"></span>
+                        )}
+                        <div className="flex-1 min-w-0 pl-1.5">
+                          <div className="flex justify-between items-start gap-1">
+                            <h4 className={`text-xs truncate font-extrabold text-primary tracking-tight ${n.unread ? 'text-primary' : 'text-gray-600 font-bold'}`}>
+                              {n.title}
+                            </h4>
+                            <span className="text-[9px] text-gray-400 font-bold flex-shrink-0">{n.time}</span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 leading-relaxed mt-0.5 truncate font-medium max-w-full">
+                            {n.text}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* User Dropdown */}
           <div className="relative">
             <button
-              onClick={() => setShowDropdown(!showDropdown)}
+              onClick={() => {
+                setShowDropdown(!showDropdown);
+                setShowNotifications(false);
+              }}
               className="flex items-center gap-2 hover:bg-gray-100 rounded-xl px-3 py-2 transition-all duration-200"
             >
-              <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center font-bold text-white text-sm">
-                {user?.initials || 'SJ'}
-              </div>
+              {user?.avatar ? (
+                <img 
+                  src={user.avatar} 
+                  alt={user.name} 
+                  className="w-8 h-8 rounded-full object-cover shadow-sm flex-shrink-0"
+                />
+              ) : (
+                <div className={`w-8 h-8 rounded-full ${user?.avatarColorClass || 'bg-accent'} flex items-center justify-center font-bold text-white text-sm flex-shrink-0`}>
+                  {user?.initials || 'SJ'}
+                </div>
+              )}
               <span className="hidden md:block font-medium text-gray-700">
                 {user?.name || 'Sarah J.'}
               </span>
@@ -55,10 +166,31 @@ export const Header = ({ tripName, dateRange, user }) => {
             {/* Dropdown Menu */}
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-all duration-200">
-                  Settings
+                <button 
+                  onClick={() => {
+                    setShowDropdown(false);
+                    if (onProfileClick) onProfileClick();
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-accent font-bold transition-all duration-200"
+                >
+                  Customize Profile
                 </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 transition-all duration-200">
+                <button 
+                  onClick={() => {
+                    setShowDropdown(false);
+                    if (onSwitchTrip) onSwitchTrip();
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 font-medium text-gray-700 transition-all duration-200"
+                >
+                  Switch / New Trip
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowDropdown(false);
+                    if (onLogout) onLogout();
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-650 font-medium transition-all duration-200"
+                >
                   Sign Out
                 </button>
               </div>

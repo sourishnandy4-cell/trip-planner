@@ -7,3 +7,7 @@ export { ItineraryTimeline } from './ItineraryTimeline';
 export { BudgetPieChart } from './BudgetPieChart';
 export { RecentExpenses } from './RecentExpenses';
 export { BalanceSheet } from './BalanceSheet';
+export { Login } from './Login';
+export { ProfileModal } from './ProfileModal';
+export { TravelDocs } from './TravelDocs';
+export { FinanceAI } from './FinanceAI';
