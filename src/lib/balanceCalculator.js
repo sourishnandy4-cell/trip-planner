@@ -1,157 +1,83 @@
-// Balance Calculator
-// Person C: Calculate who owes whom
+import { supabase, isMockMode } from './supabaseClient';
+import { mockCalculateNetBalances } from './mockDatabase';
 
-import { supabase, USE_MOCK_MODE } from './supabaseClient';
+const USER_DISPLAY_NAMES = {
+  '11111111-1111-1111-1111-111111111111': 'Sarah',
+  '22222222-2222-2222-2222-222222222222': 'Mike',
+  '33333333-3333-3333-3333-333333333333': 'Chloe',
+};
 
 /**
- * Calculate balances for a trip
- * @param {string} tripId - Trip UUID
- * @returns {Promise<Array>} Array of balance objects
+ * Compute net peer-to-peer balances for a trip.
+ * @param {string} tripId
+ * @returns {Promise<{data: Array<{from: string, to: string, amount: number}>|null, error: any}>}
  */
-export async function getBalances(tripId) {
-  if (USE_MOCK_MODE) {
-    // For mock mode, return empty array (can be enhanced later)
-    return [];
+export const calculateNetBalances = async (tripId) => {
+  if (isMockMode) {
+    return mockCalculateNetBalances(tripId);
   }
 
-  // Get all expenses with splits
-  const { data: expenses, error: expensesError } = await supabase
+  // Step 1: fetch expenses with payer info
+  const { data: expenses, error: expErr } = await supabase
     .from('expenses')
-    .select(`
-      *,
-      paid_by_user:users!expenses_paid_by_fkey(id, name),
-      expense_splits(user_id, amount, users(name))
-    `)
+    .select('id, paid_by, amount')
     .eq('trip_id', tripId);
 
-  if (expensesError) throw expensesError;
+  if (expErr) {
+    console.error('[calculateNetBalances - expenses]', expErr.message);
+    return { data: null, error: expErr };
+  }
 
-  // Calculate net balances
-  const balanceMap = {};
+  if (!expenses || expenses.length === 0) {
+    return { data: [], error: null };
+  }
 
-  expenses.forEach(expense => {
-    const paidBy = expense.paid_by_user;
-    const totalAmount = parseFloat(expense.amount);
+  const expenseMap = Object.fromEntries(expenses.map(e => [e.id, e.paid_by]));
 
-    // Initialize payer if not exists
-    if (!balanceMap[paidBy.id]) {
-      balanceMap[paidBy.id] = { name: paidBy.name, balance: 0 };
-    }
+  // Step 2: fetch unsettled splits
+  const expenseIds = expenses.map(e => e.id);
+  const { data: splits, error: splitErr } = await supabase
+    .from('expense_splits')
+    .select('expense_id, user_id, owed_amount')
+    .in('expense_id', expenseIds)
+    .eq('is_settled', false);
 
-    // Payer paid the full amount
-    balanceMap[paidBy.id].balance += totalAmount;
+  if (splitErr) {
+    console.error('[calculateNetBalances - splits]', splitErr.message);
+    return { data: null, error: splitErr };
+  }
 
-    // Subtract each person's share
-    expense.expense_splits.forEach(split => {
-      const userId = split.user_id;
-      const userName = split.users.name;
-      const shareAmount = parseFloat(split.amount);
+  // Step 3 & 4: net balance map — key: "fromId→toId"
+  const netMap = {};
 
-      if (!balanceMap[userId]) {
-        balanceMap[userId] = { name: userName, balance: 0 };
+  for (const split of splits) {
+    const payer = expenseMap[split.expense_id];
+    if (!payer || payer === split.user_id) continue;
+
+    const fwd = `${split.user_id}→${payer}`;
+    const rev = `${payer}→${split.user_id}`;
+
+    if (netMap[rev] !== undefined) {
+      netMap[rev] -= Number(split.owed_amount);
+      if (netMap[rev] < 0) {
+        netMap[fwd] = -netMap[rev];
+        delete netMap[rev];
+      } else if (netMap[rev] === 0) {
+        delete netMap[rev];
       }
-
-      balanceMap[userId].balance -= shareAmount;
-    });
-  });
-
-  // Convert to who-owes-whom format
-  const balances = [];
-  const userIds = Object.keys(balanceMap);
-
-  for (let i = 0; i < userIds.length; i++) {
-    for (let j = i + 1; j < userIds.length; j++) {
-      const user1Id = userIds[i];
-      const user2Id = userIds[j];
-      const user1 = balanceMap[user1Id];
-      const user2 = balanceMap[user2Id];
-
-      const diff = user1.balance - user2.balance;
-
-      if (Math.abs(diff) > 0.01) { // Ignore tiny differences
-        if (diff > 0) {
-          // user2 owes user1
-          balances.push({
-            from: user2.name,
-            to: user1.name,
-            amount: Math.abs(diff) / 2,
-          });
-        } else {
-          // user1 owes user2
-          balances.push({
-            from: user1.name,
-            to: user2.name,
-            amount: Math.abs(diff) / 2,
-          });
-        }
-      }
+    } else {
+      netMap[fwd] = (netMap[fwd] || 0) + Number(split.owed_amount);
     }
   }
 
-  return balances;
-}
-
-/**
- * Simplified balance calculation for equal splits
- * @param {Array} expenses - Array of expenses
- * @param {Array} members - Array of trip members
- * @returns {Array} Array of balance objects
- */
-export function calculateSimpleBalances(expenses, members) {
-  if (!expenses.length || !members.length) return [];
-
-  const memberCount = members.length;
-  const balanceMap = {};
-
-  // Initialize balances
-  members.forEach(member => {
-    balanceMap[member.name] = 0;
+  // Step 5: format for UI — replace UUIDs with display names
+  const balances = Object.entries(netMap).map(([key, amount]) => {
+    const [fromId, toId] = key.split('→');
+    const from = USER_DISPLAY_NAMES[fromId] || fromId.substring(0, 8);
+    const to = USER_DISPLAY_NAMES[toId] || toId.substring(0, 8);
+    return { from, to, amount: parseFloat(amount.toFixed(2)) };
   });
 
-  // Calculate balances
-  expenses.forEach(expense => {
-    const paidBy = expense.paid_by;
-    const amount = parseFloat(expense.amount);
-    const sharePerPerson = amount / memberCount;
-
-    // Payer gets credit
-    balanceMap[paidBy] += amount;
-
-    // Everyone owes their share
-    members.forEach(member => {
-      balanceMap[member.name] -= sharePerPerson;
-    });
-  });
-
-  // Convert to who-owes-whom
-  const balances = [];
-  const names = Object.keys(balanceMap);
-
-  for (let i = 0; i < names.length; i++) {
-    if (balanceMap[names[i]] < -0.01) {
-      // This person owes money
-      for (let j = 0; j < names.length; j++) {
-        if (balanceMap[names[j]] > 0.01) {
-          // This person is owed money
-          const amount = Math.min(
-            Math.abs(balanceMap[names[i]]),
-            balanceMap[names[j]]
-          );
-
-          if (amount > 0.01) {
-            balances.push({
-              from: names[i],
-              to: names[j],
-              amount: Math.round(amount * 100) / 100,
-            });
-
-            balanceMap[names[i]] += amount;
-            balanceMap[names[j]] -= amount;
-          }
-        }
-      }
-    }
-  }
-
-  return balances;
-}
+  return { data: balances, error: null };
+};
+export default calculateNetBalances;

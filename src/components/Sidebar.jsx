@@ -1,12 +1,13 @@
 import React from 'react';
-import { LayoutDashboard, MapPin, Receipt, FileText, LogOut, Plane } from 'lucide-react';
+import { LayoutDashboard, MapPin, Receipt, FileText, LogOut, Plane, Bot } from 'lucide-react';
 
-export const Sidebar = ({ activeTab = 'dashboard', onTabChange, username = 'User', userInitials = 'U' }) => {
+export const Sidebar = ({ activeTab = 'dashboard', onTabChange, user, onLogout, onProfileClick }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'itinerary', label: 'Itinerary', icon: MapPin },
     { id: 'expenses', label: 'Expenses', icon: Receipt },
     { id: 'docs', label: 'Docs', icon: FileText },
+    { id: 'ai', label: 'Finance AI', icon: Bot },
   ];
 
   return (
@@ -46,14 +47,32 @@ export const Sidebar = ({ activeTab = 'dashboard', onTabChange, username = 'User
       {/* User Section */}
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-2 py-3">
-          <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-primary">
-            {userInitials}
+          <div 
+            onClick={onProfileClick}
+            className="flex items-center gap-3 flex-1 min-w-0 hover:bg-white/5 p-1.5 rounded-xl cursor-pointer transition-all duration-200"
+            title="Customize Profile"
+          >
+            {user?.avatar ? (
+              <img 
+                src={user.avatar} 
+                alt={user.name} 
+                className="w-10 h-10 rounded-full object-cover shadow-sm flex-shrink-0"
+              />
+            ) : (
+              <div className={`w-10 h-10 rounded-full ${user?.avatarColorClass || 'bg-accent'} flex items-center justify-center font-bold text-white text-sm shadow-sm flex-shrink-0`}>
+                {user?.initials || 'SJ'}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm truncate">{user?.name || 'Sarah J.'}</div>
+              <div className="text-[10px] text-white/60 truncate">{user?.role || 'Trip Organizer'}</div>
+            </div>
           </div>
-          <div className="flex-1">
-            <div className="font-medium text-sm">{username}</div>
-            <div className="text-xs text-white/60">Trip Organizer</div>
-          </div>
-          <button className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200">
+          <button 
+            onClick={onLogout}
+            className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 text-white/80 hover:text-white flex-shrink-0"
+            title="Log Out"
+          >
             <LogOut className="w-4 h-4" />
           </button>
         </div>

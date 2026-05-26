@@ -4,10 +4,13 @@ on:
   push:
     branches:
       - feature/frontend-dashboard
+      - feature/api-services
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout

@@ -1,198 +1,262 @@
--- Row Level Security Policies
--- Person B: Security Policies
+-- ============================================================================
+-- GROUP TRAVEL PLANNER — ROW LEVEL SECURITY POLICIES
+-- ============================================================================
+-- Author: Person B (Database Architect)
+-- Purpose: Secure data access so users only see trips they belong to
+-- Dependencies: schema.sql must be run first
+-- ============================================================================
 
--- Enable RLS on all tables
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
-ALTER TABLE trip_members ENABLE ROW LEVEL SECURITY;
+-- ============================================================================
+-- ENABLE RLS ON ALL TABLES
+-- ============================================================================
+
+ALTER TABLE trips           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trip_members    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE itinerary_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE expense_splits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expense_splits  ENABLE ROW LEVEL SECURITY;
 
--- Users policies
-CREATE POLICY "Users can view their own profile"
-  ON users FOR SELECT
-  USING (auth.uid() = id);
+-- ============================================================================
+-- HELPER FUNCTIONS
+-- ============================================================================
 
-CREATE POLICY "Users can update their own profile"
-  ON users FOR UPDATE
-  USING (auth.uid() = id);
+-- Check if current user is a member of a given trip
+CREATE OR REPLACE FUNCTION is_trip_member(trip_uuid UUID)
+RETURNS BOOLEAN AS $$
+    SELECT EXISTS (
+        SELECT 1 
+        FROM trip_members
+        WHERE trip_id = trip_uuid
+          AND user_id = auth.uid()
+    );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
--- Trips policies
-CREATE POLICY "Users can view trips they are members of"
-  ON trips FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = trips.id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+COMMENT ON FUNCTION is_trip_member IS 'Returns true if current user is a member of the specified trip';
 
-CREATE POLICY "Users can create trips"
-  ON trips FOR INSERT
-  WITH CHECK (auth.uid() = created_by);
+-- Check if current user is the owner of a given trip
+CREATE OR REPLACE FUNCTION is_trip_owner(trip_uuid UUID)
+RETURNS BOOLEAN AS $$
+    SELECT EXISTS (
+        SELECT 1 
+        FROM trip_members
+        WHERE trip_id = trip_uuid
+          AND user_id = auth.uid()
+          AND role = 'owner'
+    );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
-CREATE POLICY "Trip organizers can update trips"
-  ON trips FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = trips.id
-      AND trip_members.user_id = auth.uid()
-      AND trip_members.role = 'organizer'
-    )
-  );
+COMMENT ON FUNCTION is_trip_owner IS 'Returns true if current user is the owner of the specified trip';
 
-CREATE POLICY "Trip organizers can delete trips"
-  ON trips FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = trips.id
-      AND trip_members.user_id = auth.uid()
-      AND trip_members.role = 'organizer'
-    )
-  );
+-- ============================================================================
+-- POLICIES: trips
+-- ============================================================================
 
--- Trip members policies
-CREATE POLICY "Users can view trip members for their trips"
-  ON trip_members FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members tm
-      WHERE tm.trip_id = trip_members.trip_id
-      AND tm.user_id = auth.uid()
-    )
-  );
+-- Members can view trips they belong to
+CREATE POLICY "Members can view their trips"
+    ON trips
+    FOR SELECT
+    USING (is_trip_member(id));
 
-CREATE POLICY "Trip organizers can add members"
-  ON trip_members FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = trip_members.trip_id
-      AND trip_members.user_id = auth.uid()
-      AND trip_members.role = 'organizer'
-    )
-  );
+-- Any authenticated user can create a trip
+CREATE POLICY "Authenticated users can create trips"
+    ON trips
+    FOR INSERT
+    WITH CHECK (auth.uid() IS NOT NULL AND created_by = auth.uid());
 
-CREATE POLICY "Trip organizers can remove members"
-  ON trip_members FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members tm
-      WHERE tm.trip_id = trip_members.trip_id
-      AND tm.user_id = auth.uid()
-      AND tm.role = 'organizer'
-    )
-  );
+-- Only trip owners can update trip details
+CREATE POLICY "Owners can update their trips"
+    ON trips
+    FOR UPDATE
+    USING (is_trip_owner(id))
+    WITH CHECK (is_trip_owner(id));
 
--- Itinerary items policies
-CREATE POLICY "Trip members can view itinerary items"
-  ON itinerary_items FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = itinerary_items.trip_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- Only trip owners can delete trips
+CREATE POLICY "Owners can delete their trips"
+    ON trips
+    FOR DELETE
+    USING (is_trip_owner(id));
 
-CREATE POLICY "Trip members can create itinerary items"
-  ON itinerary_items FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = itinerary_items.trip_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- ============================================================================
+-- POLICIES: trip_members
+-- ============================================================================
 
-CREATE POLICY "Trip members can update itinerary items"
-  ON itinerary_items FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = itinerary_items.trip_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- Members can view other members of their trips
+CREATE POLICY "Members can view trip membership"
+    ON trip_members
+    FOR SELECT
+    USING (is_trip_member(trip_id));
 
-CREATE POLICY "Trip members can delete itinerary items"
-  ON itinerary_items FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = itinerary_items.trip_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- Trip owners can add members
+CREATE POLICY "Owners can add members"
+    ON trip_members
+    FOR INSERT
+    WITH CHECK (is_trip_owner(trip_id));
 
--- Expenses policies
-CREATE POLICY "Trip members can view expenses"
-  ON expenses FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = expenses.trip_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- Trip owners can remove members (except themselves)
+CREATE POLICY "Owners can remove members"
+    ON trip_members
+    FOR DELETE
+    USING (is_trip_owner(trip_id) AND user_id != auth.uid());
 
-CREATE POLICY "Trip members can create expenses"
-  ON expenses FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = expenses.trip_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- Members can remove themselves from trips
+CREATE POLICY "Members can leave trips"
+    ON trip_members
+    FOR DELETE
+    USING (user_id = auth.uid());
 
-CREATE POLICY "Trip members can update expenses"
-  ON expenses FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = expenses.trip_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- ============================================================================
+-- POLICIES: itinerary_items
+-- ============================================================================
 
-CREATE POLICY "Trip members can delete expenses"
-  ON expenses FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM trip_members
-      WHERE trip_members.trip_id = expenses.trip_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- Members can view itinerary items for their trips
+CREATE POLICY "Members can view itinerary"
+    ON itinerary_items
+    FOR SELECT
+    USING (is_trip_member(trip_id));
 
--- Expense splits policies
-CREATE POLICY "Trip members can view expense splits"
-  ON expense_splits FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM expenses
-      JOIN trip_members ON trip_members.trip_id = expenses.trip_id
-      WHERE expenses.id = expense_splits.expense_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- Members can add itinerary items to their trips
+CREATE POLICY "Members can add itinerary items"
+    ON itinerary_items
+    FOR INSERT
+    WITH CHECK (is_trip_member(trip_id) AND created_by = auth.uid());
 
-CREATE POLICY "Trip members can create expense splits"
-  ON expense_splits FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM expenses
-      JOIN trip_members ON trip_members.trip_id = expenses.trip_id
-      WHERE expenses.id = expense_splits.expense_id
-      AND trip_members.user_id = auth.uid()
-    )
-  );
+-- Creators can update their own itinerary items
+CREATE POLICY "Creators can update their items"
+    ON itinerary_items
+    FOR UPDATE
+    USING (created_by = auth.uid())
+    WITH CHECK (created_by = auth.uid());
 
-CREATE POLICY "Users can update their own expense splits"
-  ON expense_splits FOR UPDATE
-  USING (auth.uid() = user_id);
+-- Creators can delete their own itinerary items
+CREATE POLICY "Creators can delete their items"
+    ON itinerary_items
+    FOR DELETE
+    USING (created_by = auth.uid());
+
+-- Trip owners can delete any itinerary item in their trips
+CREATE POLICY "Owners can delete any itinerary item"
+    ON itinerary_items
+    FOR DELETE
+    USING (is_trip_owner(trip_id));
+
+-- ============================================================================
+-- POLICIES: expenses
+-- ============================================================================
+
+-- Members can view expenses for their trips
+CREATE POLICY "Members can view expenses"
+    ON expenses
+    FOR SELECT
+    USING (is_trip_member(trip_id));
+
+-- Members can add expenses to their trips
+CREATE POLICY "Members can add expenses"
+    ON expenses
+    FOR INSERT
+    WITH CHECK (is_trip_member(trip_id) AND paid_by = auth.uid());
+
+-- Payers can update their own expenses
+CREATE POLICY "Payers can update their expenses"
+    ON expenses
+    FOR UPDATE
+    USING (paid_by = auth.uid())
+    WITH CHECK (paid_by = auth.uid());
+
+-- Payers can delete their own expenses
+CREATE POLICY "Payers can delete their expenses"
+    ON expenses
+    FOR DELETE
+    USING (paid_by = auth.uid());
+
+-- Trip owners can delete any expense in their trips
+CREATE POLICY "Owners can delete any expense"
+    ON expenses
+    FOR DELETE
+    USING (is_trip_owner(trip_id));
+
+-- ============================================================================
+-- POLICIES: expense_splits
+-- ============================================================================
+
+-- Members can view splits for expenses in their trips
+CREATE POLICY "Members can view splits"
+    ON expense_splits
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 
+            FROM expenses e
+            WHERE e.id = expense_splits.expense_id
+              AND is_trip_member(e.trip_id)
+        )
+    );
+
+-- Expense payers can create splits when adding an expense
+CREATE POLICY "Payers can create splits"
+    ON expense_splits
+    FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 
+            FROM expenses e
+            WHERE e.id = expense_splits.expense_id
+              AND e.paid_by = auth.uid()
+        )
+    );
+
+-- Users can mark their own splits as settled
+CREATE POLICY "Users can settle their own splits"
+    ON expense_splits
+    FOR UPDATE
+    USING (user_id = auth.uid())
+    WITH CHECK (user_id = auth.uid());
+
+-- Expense payers can update splits for their expenses
+CREATE POLICY "Payers can update splits"
+    ON expense_splits
+    FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 
+            FROM expenses e
+            WHERE e.id = expense_splits.expense_id
+              AND e.paid_by = auth.uid()
+        )
+    );
+
+-- Expense payers can delete splits for their expenses
+CREATE POLICY "Payers can delete splits"
+    ON expense_splits
+    FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 
+            FROM expenses e
+            WHERE e.id = expense_splits.expense_id
+              AND e.paid_by = auth.uid()
+        )
+    );
+
+-- ============================================================================
+-- GRANT PERMISSIONS
+-- ============================================================================
+
+-- Grant authenticated users access to tables
+GRANT SELECT, INSERT, UPDATE, DELETE ON trips TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON trip_members TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON itinerary_items TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON expenses TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON expense_splits TO authenticated;
+
+-- Grant access to sequences (for any serial columns in future)
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- ============================================================================
+-- RLS POLICIES COMPLETE
+-- ============================================================================
+-- Security model summary:
+-- - Users can only view trips they're members of
+-- - Trip owners have full control over their trips
+-- - Members can contribute itinerary items and expenses
+-- - Users can only settle their own expense splits
+-- ============================================================================

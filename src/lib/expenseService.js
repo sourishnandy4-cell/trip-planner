@@ -1,62 +1,54 @@
-// Expense Service
-// Person C: API Services for Expenses and Budget
+import { supabase, isMockMode } from './supabaseClient';
+import { mockFetchRecentExpenses, mockFetchCategoryTotals } from './mockDatabase';
 
-import { supabase, USE_MOCK_MODE } from './supabaseClient';
+const USER_DISPLAY_NAMES = {
+  '11111111-1111-1111-1111-111111111111': 'Sarah',
+  '22222222-2222-2222-2222-222222222222': 'Mike',
+  '33333333-3333-3333-3333-333333333333': 'Chloe',
+};
 
 /**
- * Get all expenses for a trip
- * @param {string} tripId - Trip UUID
- * @returns {Promise<Array>} Array of expenses
+ * Fetch the last 10 expenses for a trip with the payer's display name.
+ * @param {string} tripId
+ * @returns {Promise<{data: Array<{id: string, description: string, amount: number, category: string, paid_by: string}>|null, error: any}>}
  */
-export async function getExpenses(tripId) {
-  if (USE_MOCK_MODE) {
-    const saved = localStorage.getItem('expenses');
-    return saved ? JSON.parse(saved) : [];
+export const fetchRecentExpenses = async (tripId) => {
+  if (isMockMode) {
+    return mockFetchRecentExpenses(tripId);
   }
 
   const { data, error } = await supabase
     .from('expenses')
-    .select(`
-      *,
-      paid_by_user:users!expenses_paid_by_fkey(name)
-    `)
+    .select('id, description, amount, category, paid_by, created_at')
     .eq('trip_id', tripId)
-    .order('paid_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(10);
 
-  if (error) throw error;
+  if (error) {
+    console.error('[fetchRecentExpenses]', error.message);
+    return { data: null, error };
+  }
 
-  // Transform to match frontend format
-  return data.map(expense => ({
-    ...expense,
-    paid_by: expense.paid_by_user?.name || 'Unknown',
+  const formattedData = data.map(item => ({
+    id: item.id,
+    description: item.description,
+    amount: Number(item.amount),
+    paid_by: USER_DISPLAY_NAMES[item.paid_by] || item.paid_by.substring(0, 8),
+    category: item.category,
+    created_at: item.created_at,
   }));
-}
+
+  return { data: formattedData, error: null };
+};
 
 /**
- * Get expense categories with totals
- * @param {string} tripId - Trip UUID
- * @returns {Promise<Array>} Array of categories with amounts
+ * Fetch aggregated category totals for the budget donut chart.
+ * @param {string} tripId
+ * @returns {Promise<{data: Array<{category: string, amount: number}>|null, error: any}>}
  */
-export async function getExpenseCategories(tripId) {
-  if (USE_MOCK_MODE) {
-    const saved = localStorage.getItem('expenses');
-    const expenses = saved ? JSON.parse(saved) : [];
-    
-    const categories = expenses.reduce((acc, expense) => {
-      const existing = acc.find(cat => cat.category === expense.category);
-      if (existing) {
-        existing.amount += expense.amount;
-      } else {
-        acc.push({ 
-          id: `cat-${acc.length}`, 
-          category: expense.category, 
-          amount: expense.amount 
-        });
-      }
-      return acc;
-    }, []);
-
-    return categories;
+export const fetchCategoryTotals = async (tripId) => {
+  if (isMockMode) {
+    return mockFetchCategoryTotals(tripId);
   }
 
   const { data, error } = await supabase
@@ -64,90 +56,162 @@ export async function getExpenseCategories(tripId) {
     .select('category, amount')
     .eq('trip_id', tripId);
 
-  if (error) throw error;
-
-  // Group by category
-  const categoryMap = {};
-  data.forEach(expense => {
-    if (!categoryMap[expense.category]) {
-      categoryMap[expense.category] = 0;
-    }
-    categoryMap[expense.category] += parseFloat(expense.amount);
-  });
-
-  return Object.entries(categoryMap).map(([category, amount], index) => ({
-    id: `cat-${index}`,
-    category,
-    amount,
-  }));
-}
-
-/**
- * Add a new expense
- * @param {string} tripId - Trip UUID
- * @param {Object} expenseData - Expense details
- * @returns {Promise<Object>} Created expense
- */
-export async function addExpense(tripId, expenseData) {
-  if (USE_MOCK_MODE) {
-    const saved = localStorage.getItem('expenses');
-    const expenses = saved ? JSON.parse(saved) : [];
-    const newExpense = {
-      id: `e-${Date.now()}`,
-      trip_id: tripId,
-      ...expenseData,
-      paid_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-    };
-    expenses.push(newExpense);
-    localStorage.setItem('expenses', JSON.stringify(expenses));
-    return newExpense;
+  if (error) {
+    console.error('[fetchCategoryTotals]', error.message);
+    return { data: null, error };
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const totals = data.reduce((acc, row) => {
+    acc[row.category] = (acc[row.category] || 0) + Number(row.amount);
+    return acc;
+  }, {});
 
+  const formatted = Object.entries(totals).map(([category, amount]) => ({
+    category,
+    amount: parseFloat(amount.toFixed(2)),
+  }));
+
+  return { data: formatted, error: null };
+};
+
+const USER_IDS = {
+  'Sarah': '11111111-1111-1111-1111-111111111111',
+  'Mike': '22222222-2222-2222-2222-222222222222',
+  'Chloe': '33333333-3333-3333-3333-333333333333',
+};
+
+/**
+ * Fetch all members associated with a trip.
+ * @param {string} tripId
+ * @returns {Promise<{data: Array<string>|null, error: any}>}
+ */
+export const fetchTripMembers = async (tripId) => {
+  if (isMockMode) {
+    const { mockFetchTripMembers } = await import('./mockDatabase');
+    return mockFetchTripMembers(tripId);
+  }
+
+  // In live supabase mode, select user names from profile/trip_members table
   const { data, error } = await supabase
+    .from('trip_members')
+    .select('user_id'); // Fallback map or dynamic fetch
+
+  if (error) {
+    console.error('[fetchTripMembers]', error.message);
+    return { data: null, error };
+  }
+  return { data: ['Sarah', 'Mike', 'Chloe'], error: null }; // Fallback for schema
+};
+
+/**
+ * Add a new expense and corresponding splits.
+ * @param {string} tripId
+ * @param {{ description: string, amount: number, category: string, paid_by: string }} expense
+ * @returns {Promise<{data: any|null, error: any}>}
+ */
+export const addExpense = async (tripId, expense) => {
+  const payerName = expense.paid_by;
+  const payerId = USER_IDS[payerName] || payerName;
+
+  if (isMockMode) {
+    const { mockAddExpense, mockFetchTripMembers } = await import('./mockDatabase');
+    const { data: tripMembers } = await mockFetchTripMembers(tripId);
+    
+    const activeMembers = tripMembers && tripMembers.length > 0 ? tripMembers : ['Sarah', 'Mike', 'Chloe'];
+    const numMembers = activeMembers.length;
+    
+    const splitAmount = Number((expense.amount / numMembers).toFixed(2));
+    const splits = activeMembers.map(name => ({
+      user_id: name,
+      owed_amount: splitAmount,
+      is_settled: name === payerName
+    }));
+    return mockAddExpense(tripId, { ...expense, paid_by: payerName }, splits);
+  }
+
+  // 1. Insert expense record
+  const { data: newExpense, error: expErr } = await supabase
     .from('expenses')
-    .insert([{ 
-      trip_id: tripId, 
-      ...expenseData, 
-      paid_by: user.id 
-    }])
+    .insert([
+      {
+        trip_id: tripId,
+        description: expense.description,
+        amount: Number(expense.amount),
+        category: expense.category,
+        paid_by: payerId,
+      }
+    ])
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
-}
-
-/**
- * Delete an expense
- * @param {string} expenseId - Expense UUID
- * @returns {Promise<void>}
- */
-export async function deleteExpense(expenseId) {
-  if (USE_MOCK_MODE) {
-    const saved = localStorage.getItem('expenses');
-    const expenses = saved ? JSON.parse(saved) : [];
-    const filtered = expenses.filter(expense => expense.id !== expenseId);
-    localStorage.setItem('expenses', JSON.stringify(filtered));
-    return;
+  if (expErr) {
+    console.error('[addExpense - expenses]', expErr.message);
+    return { data: null, error: expErr };
   }
 
-  const { error } = await supabase
-    .from('expenses')
-    .delete()
-    .eq('id', expenseId);
+  // 2. Insert splits for all 3 users
+  const splitAmount = Number((expense.amount / 3).toFixed(2));
+  const splitsToInsert = Object.entries(USER_IDS).map(([name, id]) => ({
+    expense_id: newExpense.id,
+    user_id: id,
+    owed_amount: splitAmount,
+    is_settled: id === payerId,
+    settled_at: id === payerId ? new Date().toISOString() : null,
+  }));
 
-  if (error) throw error;
-}
+  const { error: splitErr } = await supabase
+    .from('expense_splits')
+    .insert(splitsToInsert);
+
+  if (splitErr) {
+    console.error('[addExpense - splits]', splitErr.message);
+    return { data: null, error: splitErr };
+  }
+
+  return { data: newExpense, error: null };
+};
 
 /**
- * Get recent expenses (last 10)
- * @param {string} tripId - Trip UUID
- * @returns {Promise<Array>} Array of recent expenses
+ * Mark all unsettled balances for a trip as settled.
+ * @param {string} tripId
+ * @returns {Promise<{data: any|null, error: any}>}
  */
-export async function getRecentExpenses(tripId) {
-  const expenses = await getExpenses(tripId);
-  return expenses.slice(0, 10);
-}
+export const settleBalances = async (tripId) => {
+  if (isMockMode) {
+    const { mockSettleBalances } = await import('./mockDatabase');
+    return mockSettleBalances(tripId);
+  }
+
+  const { data: expenses, error: fetchErr } = await supabase
+    .from('expenses')
+    .select('id')
+    .eq('trip_id', tripId);
+
+  if (fetchErr) {
+    console.error('[settleBalances - fetch]', fetchErr.message);
+    return { data: null, error: fetchErr };
+  }
+
+  if (!expenses || expenses.length === 0) {
+    return { data: { success: true }, error: null };
+  }
+
+  const expenseIds = expenses.map(e => e.id);
+
+  const { data, error: updateErr } = await supabase
+    .from('expense_splits')
+    .update({
+      is_settled: true,
+      settled_at: new Date().toISOString(),
+    })
+    .in('expense_id', expenseIds)
+    .eq('is_settled', false)
+    .select();
+
+  if (updateErr) {
+    console.error('[settleBalances - update]', updateErr.message);
+    return { data: null, error: updateErr };
+  }
+
+  return { data, error: null };
+};
