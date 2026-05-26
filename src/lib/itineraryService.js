@@ -33,6 +33,9 @@ export const addItineraryItem = async (tripId, item) => {
     return mockAddItineraryItem(tripId, item);
   }
 
+  const userStr = localStorage.getItem('wandr_user');
+  const user = userStr ? JSON.parse(userStr) : null;
+
   const { data, error } = await supabase
     .from('itinerary_items')
     .insert([{
@@ -42,6 +45,7 @@ export const addItineraryItem = async (tripId, item) => {
       start_time: item.start_time,
       notes: item.notes || '',
       category_icon: item.category_icon || 'activity',
+      created_by: user ? user.id : null,
     }])
     .select()
     .single();

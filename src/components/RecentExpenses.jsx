@@ -43,13 +43,14 @@ export const RecentExpenses = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
   const [loading, setLoading] = useState(!initialExpenses);
   const [error, setError] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  // members is now an array of { id, name } objects
   const [members, setMembers] = useState([]);
 
   // Form State
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Accommodation');
-  const [paidBy, setPaidBy] = useState('Sarah');
+  const [paidBy, setPaidBy] = useState(''); // stores member id
   const [submitting, setSubmitting] = useState(false);
 
   const loadExpenses = async () => {
@@ -72,11 +73,13 @@ export const RecentExpenses = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
   const loadMembers = async () => {
     try {
       const { data } = await fetchTripMembers(tripId);
-      if (data) {
+      if (data && data.length > 0) {
         setMembers(data);
-        if (data.length > 0 && !data.includes(paidBy)) {
-          setPaidBy(data[0]);
-        }
+        // Set default paidBy to first member id if not set
+        setPaidBy(prev => {
+          const ids = data.map(m => m.id);
+          return ids.includes(prev) ? prev : data[0].id;
+        });
       }
     } catch (err) {
       console.error('Failed to load trip members:', err);
@@ -109,7 +112,7 @@ export const RecentExpenses = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         setDescription('');
         setAmount('');
         setCategory('Accommodation');
-        setPaidBy('Sarah');
+        setPaidBy(members.length > 0 ? members[0].id : '');
         setShowAddForm(false);
         await loadExpenses();
         if (onRefresh) onRefresh();
@@ -201,20 +204,16 @@ export const RecentExpenses = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
               >
                 {members.length > 0 ? (
                   members.map(member => (
-                    <option key={member} value={member}>{member}</option>
+                    <option key={member.id} value={member.id}>{member.name}</option>
                   ))
                 ) : (
-                  <>
-                    <option value="Sarah">Sarah</option>
-                    <option value="Mike">Mike</option>
-                    <option value="Chloe">Chloe</option>
-                  </>
+                  <option value="">Loading members...</option>
                 )}
               </select>
             </div>
             
             <p className="text-[10px] text-gray-400 italic">
-              Note: This expense will automatically split equally among {members.length > 0 ? members.join(', ') : 'Sarah, Mike, and Chloe'}.
+              Note: This expense will automatically split equally among {members.length > 0 ? `${members.length} trip member${members.length > 1 ? 's' : ''}` : 'all trip members'}.
             </p>
           </div>
 

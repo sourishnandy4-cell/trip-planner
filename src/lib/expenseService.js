@@ -7,18 +7,6 @@ import {
   mockSettleBalances,
 } from './mockDatabase';
 
-const USER_DISPLAY_NAMES = {
-  '11111111-1111-1111-1111-111111111111': 'Sarah',
-  '22222222-2222-2222-2222-222222222222': 'Mike',
-  '33333333-3333-3333-3333-333333333333': 'Chloe',
-};
-
-const USER_IDS = {
-  Sarah: '11111111-1111-1111-1111-111111111111',
-  Mike:  '22222222-2222-2222-2222-222222222222',
-  Chloe: '33333333-3333-3333-3333-333333333333',
-};
-
 /** Fetch the last 10 expenses for a trip. */
 export const fetchRecentExpenses = async (tripId) => {
   if (isMockMode) return mockFetchRecentExpenses(tripId);
@@ -35,12 +23,18 @@ export const fetchRecentExpenses = async (tripId) => {
     return { data: null, error };
   }
 
+  const userStr = localStorage.getItem('wandr_user');
+  const user = userStr ? JSON.parse(userStr) : null;
+
   return {
-    data: data.map(item => ({
-      ...item,
-      amount: Number(item.amount),
-      paid_by: USER_DISPLAY_NAMES[item.paid_by] || item.paid_by.substring(0, 8),
-    })),
+    data: data.map(item => {
+      const isCurrentUser = user && item.paid_by === user.id;
+      return {
+        ...item,
+        amount: Number(item.amount),
+        paid_by: isCurrentUser ? user.name : `User-${item.paid_by.substring(0, 4)}`,
+      };
+    }),
     error: null,
   };
 };
@@ -75,7 +69,11 @@ export const fetchCategoryTotals = async (tripId) => {
 
 /** Fetch all member names associated with a trip. */
 export const fetchTripMembers = async (tripId) => {
-  if (isMockMode) return mockFetchTripMembers(tripId);
+  if (isMockMode) {
+    const res = await mockFetchTripMembers(tripId);
+    if (!res.data) return res;
+    return { data: res.data.map(name => ({ id: name, name })), error: null };
+  }
 
   const { data, error } = await supabase
     .from('trip_members')
@@ -86,17 +84,22 @@ export const fetchTripMembers = async (tripId) => {
     console.error('[fetchTripMembers]', error.message);
     return { data: null, error };
   }
-  // Map UUIDs to display names if known, else return raw
-  const names = data.map(row =>
-    USER_DISPLAY_NAMES[row.user_id] || row.user_id.substring(0, 8)
-  );
-  return { data: names, error: null };
+  
+  const userStr = localStorage.getItem('wandr_user');
+  const user = userStr ? JSON.parse(userStr) : null;
+
+  const members = data.map(row => ({
+    id: row.user_id,
+    name: user && row.user_id === user.id ? user.name : `User-${row.user_id.substring(0, 4)}`
+  }));
+  
+  return { data: members, error: null };
 };
 
 /** Add a new expense and auto-split it evenly across all trip members. */
 export const addExpense = async (tripId, expense) => {
-  const payerName = expense.paid_by;
-  const payerId   = USER_IDS[payerName] || payerName;
+  // expense.paid_by is the UUID (or the name in mock mode)
+  const payerId = expense.paid_by;
 
   if (isMockMode) {
     const { data: tripMembers } = await mockFetchTripMembers(tripId);
@@ -105,9 +108,9 @@ export const addExpense = async (tripId, expense) => {
     const splits = activeMembers.map(name => ({
       user_id:     name,
       owed_amount: splitAmount,
-      is_settled:  name === payerName,
+      is_settled:  name === payerId,
     }));
-    return mockAddExpense(tripId, { ...expense, paid_by: payerName }, splits);
+    return mockAddExpense(tripId, { ...expense, paid_by: payerId }, splits);
   }
 
   const { data: newExpense, error: expErr } = await supabase
@@ -127,8 +130,16 @@ export const addExpense = async (tripId, expense) => {
     return { data: null, error: expErr };
   }
 
-  const splitAmount   = Number((expense.amount / 3).toFixed(2));
-  const splitsToInsert = Object.entries(USER_IDS).map(([name, id]) => ({
+  // Fetch all members to split evenly
+  const { data: memberData } = await supabase
+    .from('trip_members')
+    .select('user_id')
+    .eq('trip_id', tripId);
+    
+  const activeMembers = memberData ? memberData.map(m => m.user_id) : [payerId];
+  const splitAmount   = Number((expense.amount / activeMembers.length).toFixed(2));
+
+  const splitsToInsert = activeMembers.map(id => ({
     expense_id: newExpense.id,
     user_id:    id,
     owed_amount: splitAmount,

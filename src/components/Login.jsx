@@ -73,6 +73,7 @@ export const Login = ({ onLoginSuccess }) => {
         // High fidelity Mock Auth Flow
         const initials = name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 3) : email[0].toUpperCase();
         const mockUserSession = {
+          id: email,
           email,
           name: isSignUp ? name : email.split('@')[0],
           initials,
@@ -105,6 +106,7 @@ export const Login = ({ onLoginSuccess }) => {
           if (signUpErr) throw signUpErr;
           
           const userProfile = {
+            id: data.user.id,
             email: data.user.email,
             name: name,
             initials: name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 3),
@@ -126,6 +128,7 @@ export const Login = ({ onLoginSuccess }) => {
           const userRegion = data.user.user_metadata?.region || 'IN';
           const { currencySymbol: userSymbol, currencyCode: userCode } = getRegionDetails(userRegion);
           const userProfile = {
+            id: data.user.id,
             email: data.user.email,
             name: fullName,
             initials: fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 3),

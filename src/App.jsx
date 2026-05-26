@@ -48,11 +48,36 @@ function App() {
     setTripsLoading(true);
     try {
       if (isMockMode) {
-        setExistingTrips([...MOCK_TRIPS]);
+        // Filter mock trips where current user is a member
+        const myTrips = MOCK_TRIPS.filter(trip => {
+          const membersEntry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === trip.id);
+          return membersEntry && membersEntry.members.includes(currentUser.name);
+        });
+        setExistingTrips(myTrips);
       } else {
-        const { data, error } = await supabase
+        // First get the trip IDs the user is a member of
+        let tripIds = [];
+        if (currentUser.id) {
+          const { data: memberData } = await supabase
+            .from('trip_members')
+            .select('trip_id')
+            .eq('user_id', currentUser.id);
+          if (memberData) tripIds = memberData.map(m => m.trip_id);
+        }
+
+        let query = supabase
           .from('trips')
           .select('id, name, destination, start_date, end_date, total_budget');
+
+        if (currentUser.id) {
+           if (tripIds.length > 0) {
+             query = query.or(`created_by.eq.${currentUser.id},id.in.(${tripIds.join(',')})`);
+           } else {
+             query = query.eq('created_by', currentUser.id);
+           }
+        }
+
+        const { data, error } = await query;
         if (!error && data) {
           setExistingTrips(data);
         }
@@ -90,6 +115,70 @@ function App() {
       fetchExistingTrips();
     }
   }, [currentUser, activeTripId]);
+
+  // Handle Invite Link Join Logic
+  useEffect(() => {
+    const processInvite = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteTripId = urlParams.get('invite');
+      
+      if (inviteTripId && currentUser) {
+        try {
+          if (!isMockMode) {
+            // Add user to the trip members
+            const { error: joinErr } = await supabase.from('trip_members').insert([{
+              trip_id: inviteTripId,
+              user_id: currentUser.id,
+              role: 'member'
+            }]);
+            if (joinErr) throw joinErr;
+          } else {
+            // Mock mode join
+            const existingMemberRecord = MOCK_TRIP_MEMBERS.find(m => m.trip_id === inviteTripId);
+            if (existingMemberRecord) {
+              if (!existingMemberRecord.members.includes(currentUser.name)) {
+                existingMemberRecord.members.push(currentUser.name);
+              }
+            } else {
+              MOCK_TRIP_MEMBERS.push({
+                trip_id: inviteTripId,
+                members: [currentUser.name],
+              });
+            }
+            saveMockData();
+          }
+          
+          // Clear URL parameter without refreshing page
+          const url = new URL(window.location.href);
+          url.searchParams.delete('invite');
+          window.history.replaceState({}, '', url);
+
+          // Set active trip to the invited trip
+          localStorage.setItem('wandr_active_trip_id', inviteTripId);
+          setActiveTripId(inviteTripId);
+          
+          // Refresh trips
+          await fetchExistingTrips();
+          alert('You have successfully joined the trip!');
+
+        } catch (err) {
+          if (err.code === '23505') { 
+            // Unique violation: Already a member, just switch to it
+            const url = new URL(window.location.href);
+            url.searchParams.delete('invite');
+            window.history.replaceState({}, '', url);
+            localStorage.setItem('wandr_active_trip_id', inviteTripId);
+            setActiveTripId(inviteTripId);
+          } else {
+            console.error('Failed to join trip:', err);
+            alert('Failed to join the trip: ' + err.message);
+          }
+        }
+      }
+    };
+
+    processInvite();
+  }, [currentUser]);
 
   // Sync default member name when currentUser loads
   useEffect(() => {
@@ -536,6 +625,7 @@ function App() {
         <div className="max-w-7xl mx-auto p-6">
           {/* Header */}
           <Header 
+            tripId={tripMeta.id}
             tripName={tripMeta.name}
             dateRange={dateRange}
             user={currentUser}

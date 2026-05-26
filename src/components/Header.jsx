@@ -1,32 +1,10 @@
 import React, { useState } from 'react';
-import { Search, Bell, ChevronDown, BellOff } from 'lucide-react';
+import { Search, Bell, ChevronDown, BellOff, UserPlus } from 'lucide-react';
 
-export const Header = ({ tripName, dateRange, user, onLogout, onSwitchTrip, onProfileClick }) => {
+export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTrip, onProfileClick }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'n1',
-      title: 'Flight Departure schedule',
-      text: 'Flight IB3014 is departing on time at 10:45 AM from Gate 4.',
-      unread: true,
-      time: '1h ago'
-    },
-    {
-      id: 'n2',
-      title: 'New Expense Splitting',
-      text: 'Sarah J. logged a new bill split. Your share has been calculated.',
-      unread: true,
-      time: '3h ago'
-    },
-    {
-      id: 'n3',
-      title: 'Packing Checklist Alert',
-      text: 'Remember to verify essential passport copies and travel adapters before departure.',
-      unread: true,
-      time: '1d ago'
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const hasUnread = notifications.some(n => n.unread);
 
@@ -69,6 +47,20 @@ export const Header = ({ tripName, dateRange, user, onLogout, onSwitchTrip, onPr
 
         {/* Right: Notifications & User */}
         <div className="flex items-center gap-4">
+          {/* Invite Button */}
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}${window.location.pathname}?invite=${tripId}`;
+              navigator.clipboard.writeText(url);
+              alert('Invite link copied to clipboard!');
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 hover:bg-accent/20 text-accent font-bold rounded-lg transition-colors duration-200"
+            title="Invite Friends"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden md:inline text-sm">Invite</span>
+          </button>
+
           {/* Notification Bell */}
           <div className="relative">
             <button 
