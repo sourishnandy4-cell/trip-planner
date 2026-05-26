@@ -10,3 +10,5 @@ export { BalanceSheet } from './BalanceSheet';
 export { TripSetupForm } from './TripSetupForm';
 export { AddItineraryForm } from './AddItineraryForm';
 export { AddExpenseForm } from './AddExpenseForm';
+export { UsernameSetup } from './UsernameSetup';
+export { AddFriendsModal } from './AddFriendsModal';

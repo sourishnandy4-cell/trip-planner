@@ -8,10 +8,16 @@ import { BalanceSheet } from './components/BalanceSheet';
 import { TripSetupForm } from './components/TripSetupForm';
 import { AddItineraryForm } from './components/AddItineraryForm';
 import { AddExpenseForm } from './components/AddExpenseForm';
-import { Plus } from 'lucide-react';
+import { UsernameSetup } from './components/UsernameSetup';
+import { AddFriendsModal } from './components/AddFriendsModal';
+import { Plus, Users } from 'lucide-react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // User state
+  const [username, setUsername] = useState(null);
+  const [friends, setFriends] = useState([]);
   
   // State for user data
   const [tripMeta, setTripMeta] = useState(null);
@@ -22,17 +28,37 @@ function App() {
   const [showTripForm, setShowTripForm] = useState(false);
   const [showItineraryForm, setShowItineraryForm] = useState(false);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
 
   // Load data from localStorage on mount
   useEffect(() => {
+    // Load username
+    const savedUsername = localStorage.getItem('username');
+    if (savedUsername) setUsername(savedUsername);
+
+    // Load trip data
     const savedTrip = localStorage.getItem('tripMeta');
     const savedItinerary = localStorage.getItem('itineraryItems');
     const savedExpenses = localStorage.getItem('expenses');
     
-    if (savedTrip) setTripMeta(JSON.parse(savedTrip));
+    if (savedTrip) {
+      const trip = JSON.parse(savedTrip);
+      setTripMeta(trip);
+      
+      // Load friends for this trip
+      const savedFriends = localStorage.getItem(`trip_${trip.id}_friends`);
+      if (savedFriends) setFriends(JSON.parse(savedFriends));
+    }
+    
     if (savedItinerary) setItineraryItems(JSON.parse(savedItinerary));
     if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
   }, []);
+
+  // Save username
+  const handleSaveUsername = (name) => {
+    setUsername(name);
+    localStorage.setItem('username', name);
+  };
 
   // Save trip data
   const handleSaveTrip = (trip) => {
@@ -87,6 +113,14 @@ function App() {
   // Mock balances for now (Person C will implement calculation)
   const balances = [];
 
+  // Show username setup if no username
+  if (!username) {
+    return <UsernameSetup onSave={handleSaveUsername} />;
+  }
+
+  // Get user initials
+  const userInitials = username.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
   if (!tripMeta) {
     return (
       <>
@@ -121,9 +155,27 @@ function App() {
           onCancel={() => setShowExpenseForm(false)}
         />
       )}
+      {showFriendsModal && (
+        <AddFriendsModal
+          tripId={tripMeta.id}
+          tripName={tripMeta.name}
+          currentFriends={friends}
+          onClose={() => {
+            // Reload friends when modal closes
+            const savedFriends = localStorage.getItem(`trip_${tripMeta.id}_friends`);
+            if (savedFriends) setFriends(JSON.parse(savedFriends));
+            setShowFriendsModal(false);
+          }}
+        />
+      )}
 
       {/* Sidebar */}
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        username={username}
+        userInitials={userInitials}
+      />
 
       {/* Main Content Area */}
       <div className="md:ml-64 min-h-screen">
@@ -132,7 +184,7 @@ function App() {
           <Header 
             tripName={tripMeta.name}
             dateRange={dateRange}
-            user={{ name: 'Sarah J.', initials: 'SJ' }}
+            user={{ name: username, initials: userInitials }}
           />
 
           {/* Action Buttons */}
@@ -150,6 +202,13 @@ function App() {
             >
               <Plus className="w-5 h-5" />
               Add Expense
+            </button>
+            <button
+              onClick={() => setShowFriendsModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-all duration-200"
+            >
+              <Users className="w-5 h-5" />
+              Friends ({friends.length})
             </button>
             <button
               onClick={() => setShowTripForm(true)}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, MapPin, Receipt, FileText, LogOut, Plane } from 'lucide-react';
 
-export const Sidebar = ({ activeTab = 'dashboard', onTabChange }) => {
+export const Sidebar = ({ activeTab = 'dashboard', onTabChange, username = 'User', userInitials = 'U' }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'itinerary', label: 'Itinerary', icon: MapPin },
@@ -47,10 +47,10 @@ export const Sidebar = ({ activeTab = 'dashboard', onTabChange }) => {
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-2 py-3">
           <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-primary">
-            SJ
+            {userInitials}
           </div>
           <div className="flex-1">
-            <div className="font-medium text-sm">Sarah J.</div>
+            <div className="font-medium text-sm">{username}</div>
             <div className="text-xs text-white/60">Trip Organizer</div>
           </div>
           <button className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200">
