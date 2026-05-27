@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, ChevronDown, BellOff, UserPlus, Menu } from 'lucide-react';
+import { Search, Bell, ChevronDown, BellOff, Menu } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTrip, onProfileClick, onMenuClick }) => {
@@ -59,20 +59,6 @@ export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTr
         <div className="flex items-center gap-4">
           {/* Theme Toggle */}
           <ThemeToggle />
-          
-          {/* Invite Button */}
-          <button
-            onClick={() => {
-              const url = `${window.location.origin}${window.location.pathname}?invite=${tripId}`;
-              navigator.clipboard.writeText(url);
-              alert('Invite link copied to clipboard!');
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 hover:bg-accent/20 text-accent font-bold rounded-lg transition-colors duration-200"
-            title="Invite Friends"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span className="hidden md:inline text-sm">Invite</span>
-          </button>
 
           {/* Notification Bell */}
           <div className="relative">

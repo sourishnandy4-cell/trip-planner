@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Mail, Crown, User as UserIcon } from 'lucide-react';
+import { Users, UserPlus, Mail, Crown, User as UserIcon, Share2 } from 'lucide-react';
 import { AddFriendsModal } from './AddFriendsModal';
 import { supabase, isMockMode } from '../lib/supabaseClient';
 import { mockFetchTripMembers, MOCK_TRIP_MEMBERS } from '../lib/mockDatabase';
@@ -90,8 +90,8 @@ export const TripMembers = ({ tripId, tripName, currentUser }) => {
             onClick={() => setShowAddModal(true)}
             className="px-4 py-2 bg-white text-primary font-semibold rounded-xl hover:bg-white/90 transition-all duration-200 flex items-center gap-2 shadow-lg"
           >
-            <UserPlus className="w-4 h-4" />
-            Add Members
+            <Share2 className="w-4 h-4" />
+            Invite Friends
           </button>
         </div>
       </div>
@@ -180,8 +180,8 @@ export const TripMembers = ({ tripId, tripName, currentUser }) => {
             onClick={() => setShowAddModal(true)}
             className="px-6 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-all duration-200 inline-flex items-center gap-2"
           >
-            <UserPlus className="w-4 h-4" />
-            Add First Member
+            <Share2 className="w-4 h-4" />
+            Invite First Member
           </button>
         </div>
       )}
