@@ -1,12 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Bus, Utensils, MapPin, Music, Plus, Calendar, FileText, ChevronUp, AlertCircle } from 'lucide-react';
+import { Bus, Utensils, MapPin, Music, Plus, ChevronUp, AlertCircle, Hotel, Trash2 } from 'lucide-react';
 import { fetchItinerary, addItineraryItem } from '../lib/itineraryService';
+import { isMockMode } from '../lib/supabaseClient';
+import { MOCK_ITINERARY_ITEMS, saveMockData } from '../lib/mockDatabase';
+import { supabase } from '../lib/supabaseClient';
 
 const iconMap = {
   transport: Bus,
   food: Utensils,
   activity: MapPin,
   music: Music,
+  accommodation: Hotel,
+};
+
+const categoryColors = {
+  transport: 'bg-purple-100 text-purple-600',
+  food: 'bg-orange-100 text-orange-600',
+  activity: 'bg-teal-100 text-teal-600',
+  music: 'bg-pink-100 text-pink-600',
+  accommodation: 'bg-blue-100 text-blue-600',
 };
 
 const TimelineSkeleton = () => (
@@ -66,6 +78,7 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
   const [loading, setLoading] = useState(!initialItems);
   const [error, setError] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -128,6 +141,26 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
       alert('An error occurred while saving.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (itemId) => {
+    if (!window.confirm('Delete this activity from the itinerary?')) return;
+    setDeletingId(itemId);
+    try {
+      if (isMockMode) {
+        const idx = MOCK_ITINERARY_ITEMS.findIndex(i => i.id === itemId);
+        if (idx !== -1) { MOCK_ITINERARY_ITEMS.splice(idx, 1); saveMockData(); }
+      } else {
+        const { error: delErr } = await supabase.from('itinerary_items').delete().eq('id', itemId);
+        if (delErr) throw delErr;
+      }
+      await loadItinerary();
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      alert('Failed to delete activity: ' + (err.message || 'Unknown error'));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -208,17 +241,17 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">Category Icon</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Category</label>
               <select
                 value={categoryIcon}
                 onChange={e => setCategoryIcon(e.target.value)}
                 className="w-full text-sm rounded-lg border-gray-200 px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-[#E8A87C] focus:border-transparent bg-white text-gray-800"
               >
-                <option value="activity">🎯 Activity (Map Pin)</option>
-                <option value="food">🍴 Food (Utensils)</option>
-                <option value="transport">🚌 Transport (Bus)</option>
-                <option value="music">🎵 Music (Music Note)</option>
-                <option value="accommodation">🏨 Accommodation (Hotel)</option>
+                <option value="activity">🎯 Activity</option>
+                <option value="food">🍴 Food & Drinks</option>
+                <option value="transport">🚌 Transport</option>
+                <option value="accommodation">🏨 Accommodation</option>
+                <option value="music">🎵 Music / Show</option>
               </select>
             </div>
           </div>
@@ -228,7 +261,7 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Add confirmation codes, tickets, or dress codes..."
+              placeholder="Confirmation codes, dress codes, tickets..."
               className="w-full text-sm rounded-lg border-gray-200 px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-[#E8A87C] focus:border-transparent bg-white text-gray-800 h-20 resize-none"
             />
           </div>
@@ -253,19 +286,18 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
         <div className="space-y-8">
           {Object.entries(groupedByDate).map(([date, dayItems]) => (
             <div key={date} className="relative">
-              {/* Date Label */}
               <div className="flex items-start gap-4">
                 <div className="w-24 flex-shrink-0">
                   <div className="text-sm font-bold text-primary">{date}</div>
                 </div>
 
-                {/* Timeline Line & Activities */}
                 <div className="flex-1 relative">
                   <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-200"></div>
                   
                   <div className="space-y-4">
                     {dayItems.map((item) => {
                       const Icon = iconMap[item.category_icon] || MapPin;
+                      const colorClass = categoryColors[item.category_icon] || 'bg-teal-100 text-teal-600';
                       const time = new Date(item.start_time).toLocaleTimeString('en-US', {
                         hour: 'numeric',
                         minute: '2-digit',
@@ -274,30 +306,37 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
                       });
 
                       return (
-                        <div
-                          key={item.id}
-                          className="relative pl-8 group"
-                        >
-                          {/* Timeline Dot */}
+                        <div key={item.id} className="relative pl-8 group">
                           <div className="absolute left-0 top-2 w-3 h-3 bg-accent rounded-full -translate-x-[5px] ring-4 ring-white"></div>
 
-                          {/* Activity Card */}
                           <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                             <div className="flex items-start gap-3">
-                              <div className="p-2 bg-accent/10 rounded-lg">
-                                <Icon className="w-5 h-5 text-accent" />
+                              <div className={`p-2 rounded-lg flex-shrink-0 ${colorClass.split(' ')[0]}`}>
+                                <Icon className={`w-5 h-5 ${colorClass.split(' ')[1]}`} />
                               </div>
                               
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="text-xs font-medium text-gray-500">{time}</span>
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${colorClass}`}>
+                                    {item.category_icon || 'activity'}
+                                  </span>
                                 </div>
                                 <h3 className="font-bold text-primary mb-1">{item.title}</h3>
-                                <p className="text-sm text-gray-600">{item.location}</p>
+                                {item.location && <p className="text-sm text-gray-600">{item.location}</p>}
                                 {item.notes && (
                                   <p className="text-xs text-gray-500 mt-2 italic">{item.notes}</p>
                                 )}
                               </div>
+
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                disabled={deletingId === item.id}
+                                className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
+                                title="Delete activity"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
                         </div>

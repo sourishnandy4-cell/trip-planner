@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sidebar, Header, ItineraryTimeline, BudgetPieChart, RecentExpenses, BalanceSheet, Login, ProfileModal, TravelDocs, FinanceAI, TripMembers } from './components';
+import { Sidebar, Header, ItineraryTimeline, BudgetPieChart, RecentExpenses, BalanceSheet, Login, ProfileModal, TravelDocs, FinanceAI, TripMembers, MapView, WeatherView } from './components';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { supabase, isMockMode } from './lib/supabaseClient';
 import {
@@ -263,7 +263,7 @@ function App() {
       } else {
         const { data, error: fetchErr } = await supabase
           .from('trips')
-          .select('id, name, start_date, end_date, total_budget')
+          .select('id, name, destination, start_date, end_date, total_budget')
           .eq('id', activeTripId)
           .maybeSingle(); // Use maybeSingle() instead of single() to handle no results gracefully
 
@@ -804,6 +804,23 @@ function App() {
                 tripId={tripMeta.id}
                 tripName={tripMeta.name}
                 currentUser={currentUser}
+              />
+            </div>
+          )}
+
+          {activeTab === 'map' && (
+            <div className="animate-fadeIn">
+              <MapView
+                tripId={tripMeta.id}
+                tripDestination={tripMeta.destination}
+              />
+            </div>
+          )}
+
+          {activeTab === 'weather' && (
+            <div className="animate-fadeIn">
+              <WeatherView
+                tripDestination={tripMeta.destination}
               />
             </div>
           )}

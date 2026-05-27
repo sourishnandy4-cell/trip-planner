@@ -1,11 +1,13 @@
 import React from 'react';
-import { LayoutDashboard, MapPin, Receipt, FileText, LogOut, Plane, Bot, Users, X } from 'lucide-react';
+import { LayoutDashboard, MapPin, Receipt, FileText, LogOut, Plane, Bot, Users, X, Map, Cloud } from 'lucide-react';
 
 export const Sidebar = ({ activeTab = 'dashboard', onTabChange, user, onLogout, onProfileClick, isOpen, onClose }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'itinerary', label: 'Itinerary', icon: MapPin },
     { id: 'expenses', label: 'Expenses', icon: Receipt },
+    { id: 'map', label: 'Map', icon: Map },
+    { id: 'weather', label: 'Weather', icon: Cloud },
     { id: 'members', label: 'Members', icon: Users },
     { id: 'docs', label: 'Docs', icon: FileText },
     { id: 'ai', label: 'Finance AI', icon: Bot },
