@@ -46,7 +46,11 @@ function App() {
       url.searchParams.delete('join');
       window.history.replaceState({}, '', url);
     } else if (inviteTripId) {
-      localStorage.setItem('wandr_pending_invite', inviteTripId);
+      // Only stash legacy ?invite= if it looks like a UUID (not a self-visit)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(inviteTripId)) {
+        localStorage.setItem('wandr_pending_invite', inviteTripId);
+      }
       const url = new URL(window.location.href);
       url.searchParams.delete('invite');
       window.history.replaceState({}, '', url);
@@ -155,7 +159,10 @@ function App() {
       // ── New encoded snapshot join ──────────────────────────────────────
       if (joinPayload) {
         try {
-          const json = decodeURIComponent(escape(atob(joinPayload)));
+          // Reverse URL-safe base64 encoding (- → +, _ → /) and restore padding
+          const standard = joinPayload.replace(/-/g, '+').replace(/_/g, '/');
+          const padded   = standard + '=='.slice(0, (4 - standard.length % 4) % 4);
+          const json = decodeURIComponent(escape(atob(padded)));
           const { trip, members, itinerary, expenses } = JSON.parse(json);
 
           if (!trip) throw new Error('Invalid share link — trip data missing.');
@@ -204,20 +211,17 @@ function App() {
 
       // ── Legacy ?invite= link ───────────────────────────────────────────
       if (inviteTripId) {
+        // If this trip ID is already in the user's saved trips, just silently clear — they're the organizer
+        const alreadyOwned = MOCK_TRIPS.some(t => t.id === inviteTripId);
+        if (alreadyOwned) {
+          clearPending();
+          return;
+        }
         try {
           if (isMockMode) {
-            const tripExists = MOCK_TRIPS.some(t => t.id === inviteTripId);
-            if (!tripExists) {
-              alert('This invite link is outdated. Ask the trip organiser to share a new link from the Members tab.');
-              clearPending();
-              return;
-            }
-            const rec = MOCK_TRIP_MEMBERS.find(m => m.trip_id === inviteTripId);
-            if (rec) {
-              if (!rec.members.includes(currentUser.name)) { rec.members.push(currentUser.name); saveMockData(); }
-            } else {
-              MOCK_TRIP_MEMBERS.push({ trip_id: inviteTripId, members: [currentUser.name] }); saveMockData();
-            }
+            alert('This invite link is outdated. Ask the trip organiser to share a new link from the Members tab.');
+            clearPending();
+            return;
           } else {
             const { error: joinErr } = await supabase.from('trip_members').insert([{
               trip_id: inviteTripId, user_id: currentUser.id, role: 'member'

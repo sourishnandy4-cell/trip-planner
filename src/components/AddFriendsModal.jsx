@@ -18,7 +18,12 @@ export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = []
       const itinerary = MOCK_ITINERARY_ITEMS.filter(i => i.trip_id === tripId);
       const expenses = MOCK_EXPENSES.filter(e => e.trip_id === tripId);
       const payload = { trip, members, itinerary, expenses };
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+      // Use URL-safe base64: replace +→- /→_ and strip = padding so that
+      // URLSearchParams.get() doesn't misinterpret + as a space on the receiver's end.
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
       return `${window.location.origin}${window.location.pathname}?join=${encoded}`;
     } catch (e) {
       return `${window.location.origin}${window.location.pathname}?invite=${tripId}`;
