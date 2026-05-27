@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, Header, ItineraryTimeline, BudgetPieChart, RecentExpenses, BalanceSheet, Login, ProfileModal, TravelDocs, FinanceAI, TripMembers } from './components';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { supabase, isMockMode } from './lib/supabaseClient';
 import {
   MOCK_TRIPS,
@@ -677,7 +678,7 @@ function App() {
   })}`;
 
   return (
-    <div className="min-h-screen bg-warm-bg">
+    <div className="min-h-screen bg-warm-bg dark:bg-dark-bg transition-colors duration-200">
       {/* Sidebar */}
       <Sidebar 
         activeTab={activeTab} 

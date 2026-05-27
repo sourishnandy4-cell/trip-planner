@@ -12,3 +12,4 @@ export { ProfileModal } from './ProfileModal';
 export { TravelDocs } from './TravelDocs';
 export { FinanceAI } from './FinanceAI';
 export { TripMembers } from './TripMembers';
+export { ThemeToggle } from './ThemeToggle';

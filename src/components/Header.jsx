@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Bell, ChevronDown, BellOff, UserPlus, Menu } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTrip, onProfileClick, onMenuClick }) => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -21,7 +22,7 @@ export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTr
   };
 
   return (
-    <header className="bg-white shadow-sm rounded-2xl p-4 mb-6">
+    <header className="bg-white dark:bg-dark-card shadow-sm rounded-2xl p-4 mb-6 transition-colors duration-200">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Mobile Menu + Trip Info */}
         <div className="flex items-center gap-4">
@@ -35,7 +36,7 @@ export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTr
           </button>
           
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-primary">{tripName}</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-primary dark:text-dark-text">{tripName}</h1>
             <span className="inline-block mt-1 px-3 py-1 bg-accent/10 text-accent text-xs md:text-sm font-medium rounded-full">
               {dateRange}
             </span>
@@ -56,6 +57,9 @@ export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTr
 
         {/* Right: Notifications & User */}
         <div className="flex items-center gap-4">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+          
           {/* Invite Button */}
           <button
             onClick={() => {
