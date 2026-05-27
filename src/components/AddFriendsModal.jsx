@@ -5,27 +5,48 @@ import {
   MOCK_TRIPS, MOCK_TRIP_MEMBERS, MOCK_ITINERARY_ITEMS, MOCK_EXPENSES, saveMockData
 } from '../lib/mockDatabase';
 
-export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = [] }) => {
+// tripData  — full trip object passed down from App (needed in Supabase mode where
+//             MOCK_TRIPS is empty). Falls back gracefully to MOCK_TRIPS in mock mode.
+export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = [], tripData = null }) => {
   const [copied, setCopied] = useState(false);
 
   const buildShareLink = () => {
-    if (!isMockMode) {
-      return `${window.location.origin}${window.location.pathname}?invite=${tripId}`;
-    }
     try {
-      const trip = MOCK_TRIPS.find(t => t.id === tripId);
-      const members = MOCK_TRIP_MEMBERS.find(m => m.trip_id === tripId);
-      const itinerary = MOCK_ITINERARY_ITEMS.filter(i => i.trip_id === tripId);
-      const expenses = MOCK_EXPENSES.filter(e => e.trip_id === tripId);
+      let trip, members, itinerary, expenses;
+
+      if (isMockMode) {
+        // Mock mode: pull full snapshot from in-memory arrays
+        trip      = MOCK_TRIPS.find(t => t.id === tripId);
+        members   = MOCK_TRIP_MEMBERS.find(m => m.trip_id === tripId);
+        itinerary = MOCK_ITINERARY_ITEMS.filter(i => i.trip_id === tripId);
+        expenses  = MOCK_EXPENSES.filter(e => e.trip_id === tripId);
+      } else {
+        // Supabase mode: use the tripData prop (trip meta from App.jsx).
+        // Itinerary + expenses live server-side; the friend can load them
+        // once they open the trip. At minimum the trip card + members are embedded.
+        trip    = tripData || { id: tripId, name: tripName };
+        members = {
+          trip_id: tripId,
+          members: currentFriends.map(f => (typeof f === 'string' ? f : f.name)),
+        };
+        itinerary = [];
+        expenses  = [];
+      }
+
+      if (!trip) throw new Error('Trip data not available');
+
       const payload = { trip, members, itinerary, expenses };
-      // Use URL-safe base64: replace +→- /→_ and strip = padding so that
-      // URLSearchParams.get() doesn't misinterpret + as a space on the receiver's end.
+
+      // URL-safe base64: replace +->- /->_ and strip = padding so that
+      // URLSearchParams.get() never misinterprets + as a space on the receiver's end.
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=/g, '');
+
       return `${window.location.origin}${window.location.pathname}?join=${encoded}`;
     } catch (e) {
+      // Last-resort fallback — at least the trip ID is present
       return `${window.location.origin}${window.location.pathname}?invite=${tripId}`;
     }
   };
@@ -76,7 +97,7 @@ export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = []
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold text-blue-500 flex-shrink-0">3.</span>
-              They open the link, create a name/login, and the full trip — itinerary, expenses, members — loads automatically in their browser
+              They open the link, sign in, and the trip loads automatically in their browser
             </li>
           </ol>
         </div>
@@ -104,7 +125,7 @@ export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = []
             </button>
           </div>
           <p className="text-[11px] text-gray-400 mt-2 pl-1">
-            This link contains a full snapshot of your trip — no account or backend needed.
+            This link contains a snapshot of your trip — no special account needed to join.
           </p>
         </div>
 

@@ -4,7 +4,7 @@ import { AddFriendsModal } from './AddFriendsModal';
 import { supabase, isMockMode } from '../lib/supabaseClient';
 import { mockFetchTripMembers, MOCK_TRIP_MEMBERS } from '../lib/mockDatabase';
 
-export const TripMembers = ({ tripId, tripName, currentUser }) => {
+export const TripMembers = ({ tripId, tripName, currentUser, tripData = null }) => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -191,6 +191,7 @@ export const TripMembers = ({ tripId, tripName, currentUser }) => {
         <AddFriendsModal
           tripId={tripId}
           tripName={tripName}
+          tripData={tripData}
           onClose={handleModalClose}
           currentFriends={isMockMode ? members : members.map(m => m.name)}
         />

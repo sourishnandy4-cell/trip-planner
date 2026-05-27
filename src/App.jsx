@@ -106,7 +106,15 @@ function App() {
 
         const { data, error } = await query;
         if (!error && data) {
-          setExistingTrips(data);
+          // Merge in any locally-imported trips (joined via invite link) that aren't
+          // already returned by Supabase (e.g. friend opened a ?join= link).
+          const supabaseIds = new Set(data.map(t => t.id));
+          const localExtras = MOCK_TRIPS.filter(t => {
+            if (supabaseIds.has(t.id)) return false;
+            const entry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === t.id);
+            return entry && entry.members.includes(currentUser.name);
+          });
+          setExistingTrips([...data, ...localExtras]);
         }
       }
     } catch (err) {
@@ -296,6 +304,14 @@ function App() {
         }
         
         if (!data) {
+          // Before giving up, check whether this trip was imported locally via an invite link.
+          // This handles the case where isMockMode=false (Supabase configured) but the friend
+          // joined via a ?join= link and the trip was saved into MOCK_TRIPS on their device.
+          const localTrip = MOCK_TRIPS.find(t => t.id === activeTripId);
+          if (localTrip) {
+            setTripMeta(localTrip);
+            return;
+          }
           // Trip doesn't exist or user doesn't have access
           setError('Trip not found or you don\'t have access. Please check your permissions or select a different trip.');
           localStorage.removeItem('wandr_active_trip_id');
@@ -825,6 +841,7 @@ function App() {
               <TripMembers 
                 tripId={tripMeta.id}
                 tripName={tripMeta.name}
+                tripData={tripMeta}
                 currentUser={currentUser}
               />
             </div>
