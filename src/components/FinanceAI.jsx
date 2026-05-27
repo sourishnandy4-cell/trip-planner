@@ -69,10 +69,10 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 const MODELS = [
-  { id: 'gemini-2.5-flash-preview-05-20', name: 'Gemini 2.5 Flash ✦' },
-  { id: 'gemini-2.0-flash',               name: 'Gemini 2.0 Flash' },
-  { id: 'gemini-1.5-flash',               name: 'Gemini 1.5 Flash' },
-  { id: 'gemini-1.5-flash-8b',            name: 'Gemini 1.5 Flash 8B' },
+  { id: 'gemini-2.5-flash',  name: 'Gemini 2.5 Flash ✦' },
+  { id: 'gemini-2.0-flash',  name: 'Gemini 2.0 Flash' },
+  { id: 'gemini-1.5-flash',  name: 'Gemini 1.5 Flash' },
+  { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash 8B' },
 ];
 
 const SUGGESTIONS = [
@@ -83,7 +83,7 @@ const SUGGESTIONS = [
 ];
 
 export const FinanceAI = ({ tripId, tripName, tripDestination, totalBudget, currencySymbol = '₹' }) => {
-  const [model, setModel]       = useState('gemini-2.5-flash-preview-05-20');
+  const [model, setModel]       = useState('gemini-2.5-flash');
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading]   = useState(false);
