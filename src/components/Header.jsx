@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Search, Bell, ChevronDown, BellOff, UserPlus } from 'lucide-react';
+import { Search, Bell, ChevronDown, BellOff, UserPlus, Menu } from 'lucide-react';
 
-export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTrip, onProfileClick }) => {
+export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTrip, onProfileClick, onMenuClick }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -23,11 +23,20 @@ export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTr
   return (
     <header className="bg-white shadow-sm rounded-2xl p-4 mb-6">
       <div className="flex items-center justify-between gap-4">
-        {/* Left: Trip Info */}
+        {/* Left: Mobile Menu + Trip Info */}
         <div className="flex items-center gap-4">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={onMenuClick}
+            className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
+            aria-label="Open menu"
+          >
+            <Menu className="w-6 h-6 text-gray-700" />
+          </button>
+          
           <div>
-            <h1 className="text-2xl font-bold text-primary">{tripName}</h1>
-            <span className="inline-block mt-1 px-3 py-1 bg-accent/10 text-accent text-sm font-medium rounded-full">
+            <h1 className="text-xl md:text-2xl font-bold text-primary">{tripName}</h1>
+            <span className="inline-block mt-1 px-3 py-1 bg-accent/10 text-accent text-xs md:text-sm font-medium rounded-full">
               {dateRange}
             </span>
           </div>

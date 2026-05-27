@@ -29,6 +29,7 @@ function App() {
     return localStorage.getItem('wandr_active_trip_id') || null;
   });
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Onboarding Form State
   const [newTripName, setNewTripName] = useState('');
@@ -684,6 +685,8 @@ function App() {
         user={currentUser}
         onLogout={handleLogout}
         onProfileClick={() => setShowProfileModal(true)}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       {/* Main Content Area */}
@@ -698,6 +701,7 @@ function App() {
             onLogout={handleLogout}
             onSwitchTrip={handleSwitchTrip}
             onProfileClick={() => setShowProfileModal(true)}
+            onMenuClick={() => setMobileMenuOpen(true)}
           />
 
           {/* Dynamic Tab Views */}
