@@ -139,7 +139,7 @@ export const ProfileModal = ({ user, onClose, onSave }) => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-red-650 text-xs text-center">
+            <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-red-600 text-xs text-center">
               {error}
             </div>
           )}

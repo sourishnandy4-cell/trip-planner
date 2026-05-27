@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Bot, Send, Trash2, Loader2, Sparkles, HelpCircle,
+  Bot, Send, Trash2, Loader2, HelpCircle,
   Cloud, Map, DollarSign, MessageCircle, Globe,
-  TrendingUp, Compass, Lightbulb, Key, Eye, EyeOff,
-  ExternalLink, CheckCircle, X,
+  TrendingUp, Compass, Lightbulb, Settings,
 } from 'lucide-react';
 import { fetchItinerary } from '../lib/itineraryService';
 import { fetchRecentExpenses, fetchTripMembers } from '../lib/expenseService';
 import { calculateNetBalances } from '../lib/balanceCalculator';
-
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const LS_KEY = 'wandr_gemini_api_key';
+import { loadAISettings, AI_PROVIDERS } from './AISettings';
 
 // ── Lightweight markdown renderer ─────────────────────────────────────────────
 const inlineMarkdown = (text) => {
@@ -59,12 +56,6 @@ const WMO_DESC = {
   75:'Heavy Snow',80:'Slight Showers',81:'Moderate Showers',82:'Violent Showers',
   95:'Thunderstorm',96:'Thunderstorm+Hail',99:'Heavy Hail Storm',
 };
-
-const MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash ✦' },
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
-];
 
 const SUGGESTIONS = [
   'Am I over budget?', "How's the weather this week?", 'Who owes the most?',
@@ -125,136 +116,136 @@ const fetchDestinationCoords = async (destination) => {
   } catch (e) { return null; }
 };
 
-// ── API Key Setup Screen ───────────────────────────────────────────────────────
-const ApiKeySetup = ({ onKeySaved }) => {
-  const [input, setInput]     = useState('');
-  const [show, setShow]       = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [err, setErr]         = useState('');
-
-  const handleSave = async () => {
-    const key = input.trim();
-    if (!key.startsWith('AIza') || key.length < 30) {
-      setErr('That doesn\'t look like a valid Gemini API key. It should start with "AIza".');
-      return;
-    }
-    setTesting(true); setErr('');
-    try {
-      const res = await fetch(`${GEMINI_API_BASE}/gemini-2.0-flash:generateContent?key=${key}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: 'Hi' }] }] }),
-      });
-      if (res.status === 400 || res.ok) {
-        // 400 = model params issue but key is valid; ok = works perfectly
-        localStorage.setItem(LS_KEY, key);
-        onKeySaved(key);
-      } else if (res.status === 403 || res.status === 401) {
-        setErr('Key rejected (403/401). Make sure the key has no HTTP referrer restrictions. See instructions below.');
-      } else {
-        setErr(`Unexpected response: HTTP ${res.status}. Please try again.`);
-      }
-    } catch (e) {
-      setErr('Network error testing key. Please try again.');
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-center h-full px-4 py-8 text-center space-y-6">
-      {/* Icon */}
-      <div className="p-4 bg-primary/10 rounded-3xl">
-        <Key className="w-8 h-8 text-primary" />
-      </div>
-
-      {/* Title */}
-      <div className="space-y-2 max-w-sm">
-        <h2 className="font-extrabold text-xl text-primary">Add Your Gemini API Key</h2>
-        <p className="text-sm text-gray-500 leading-relaxed">
-          Wandr AI uses Google Gemini. Each user brings their own <strong>free</strong> API key —
-          it stays on your device only, never sent to any server.
-        </p>
-      </div>
-
-      {/* Steps */}
-      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left space-y-3 w-full max-w-sm">
-        <p className="text-xs font-extrabold text-gray-400 uppercase tracking-wider">How to get your free key</p>
-        {[
-          { n: '1', t: 'Open Google AI Studio', sub: 'aistudio.google.com/app/apikey', link: 'https://aistudio.google.com/app/apikey' },
-          { n: '2', t: 'Click "Create API key"', sub: 'Then "Create API key in new project"' },
-          { n: '3', t: 'Copy & paste it below', sub: 'Starts with AIza… · 100% free' },
-        ].map(({ n, t, sub, link }) => (
-          <div key={n} className="flex items-start gap-3">
-            <div className="w-6 h-6 rounded-full bg-primary text-white text-xs font-extrabold flex items-center justify-center flex-shrink-0 mt-0.5">{n}</div>
-            <div>
-              <p className="text-sm font-bold text-gray-700">{t}</p>
-              {link
-                ? <a href={link} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline flex items-center gap-1">{sub} <ExternalLink className="w-3 h-3" /></a>
-                : <p className="text-xs text-gray-400">{sub}</p>}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Input */}
-      <div className="w-full max-w-sm space-y-2">
-        <div className="relative">
-          <input
-            type={show ? 'text' : 'password'}
-            value={input}
-            onChange={e => { setInput(e.target.value); setErr(''); }}
-            placeholder="AIzaSy…"
-            className="w-full text-sm rounded-2xl border border-gray-200 px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-transparent font-mono"
-          />
-          <button type="button" onClick={() => setShow(s => !s)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-            {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
-        {err && <p className="text-xs text-red-500 text-left px-1">{err}</p>}
-        <button onClick={handleSave} disabled={testing || !input.trim()}
-          className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl py-3 text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50">
-          {testing ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying key…</> : <><CheckCircle className="w-4 h-4" /> Save & Activate AI</>}
-        </button>
-      </div>
-
-      <p className="text-[10px] text-gray-400 max-w-xs">
-        🔒 Your key is stored only in your browser's localStorage. It is never uploaded anywhere.
+// ── No-provider setup screen ──────────────────────────────────────────────────
+const NoProviderSetup = ({ onGoToSettings }) => (
+  <div className="flex flex-col items-center justify-center h-full px-4 py-8 text-center space-y-6">
+    <div className="p-4 bg-primary/10 rounded-3xl">
+      <Bot className="w-8 h-8 text-primary" />
+    </div>
+    <div className="space-y-2 max-w-sm">
+      <h2 className="font-extrabold text-xl text-primary">Set Up Your AI Provider</h2>
+      <p className="text-sm text-gray-500 leading-relaxed">
+        Wandr AI supports <strong>Gemini, Groq, Mistral, and OpenRouter</strong>.
+        Go to <strong>Settings</strong> to choose a provider and add your free API key.
       </p>
     </div>
-  );
+    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left space-y-3 w-full max-w-sm">
+      <p className="text-xs font-extrabold text-gray-400 uppercase tracking-wider">Available Providers</p>
+      {Object.values(AI_PROVIDERS).map(p => (
+        <div key={p.id} className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${p.color} flex items-center justify-center text-white text-sm flex-shrink-0`}>{p.logo}</div>
+          <div>
+            <p className="text-sm font-bold text-gray-700">{p.name}</p>
+            <p className="text-xs text-gray-400">{p.keyHint}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+    <button
+      onClick={onGoToSettings}
+      className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl px-6 py-3 text-sm transition-all"
+    >
+      <Settings className="w-4 h-4" /> Go to Settings
+    </button>
+    <p className="text-[10px] text-gray-400 max-w-xs">
+      🔒 Your API key is stored only in your browser. Never uploaded to any server.
+    </p>
+  </div>
+);
+
+// ── Multi-provider API call ───────────────────────────────────────────────────
+const callProviderAPI = async (provider, apiKey, model, systemPrompt, history, userText) => {
+  if (provider.id === 'gemini') {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [...history, { role: 'user', parts: [{ text: userText }] }],
+          generationConfig: { temperature: 0.75, maxOutputTokens: 2000 },
+        }),
+      }
+    );
+    if (res.status === 401 || res.status === 403) throw new Error('Gemini API key rejected (403). Check key restrictions at aistudio.google.com/app/apikey.');
+    if (res.status === 429) throw new Error('Rate limited — please wait a moment and try again.');
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
+    const data = await res.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if (!reply) {
+      if (data?.candidates?.[0]?.finishReason === 'SAFETY') throw new Error('Blocked by safety filters. Try rephrasing.');
+      throw new Error('Empty response. Please try again.');
+    }
+    return reply;
+  }
+
+  // OpenAI-compatible providers (Groq, Mistral, OpenRouter)
+  const endpoints = {
+    groq: 'https://api.groq.com/openai/v1/chat/completions',
+    mistral: 'https://api.mistral.ai/v1/chat/completions',
+    openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+  };
+  const url = endpoints[provider.id];
+  if (!url) throw new Error('Unknown provider.');
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...history.map(m => ({ role: m.role === 'model' ? 'assistant' : m.role, content: m.parts?.[0]?.text || m.content || '' })),
+    { role: 'user', content: userText },
+  ];
+
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`,
+  };
+  if (provider.id === 'openrouter') {
+    headers['HTTP-Referer'] = 'https://sourishnandy4-cell.github.io';
+    headers['X-Title'] = 'Wandr Travel Planner';
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ model, messages, max_tokens: 2000, temperature: 0.75 }),
+  });
+  if (res.status === 401 || res.status === 403) throw new Error(`${provider.name} API key rejected. Check your key in Settings.`);
+  if (res.status === 429) throw new Error('Rate limited — please wait a moment and try again.');
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
+  const data = await res.json();
+  const reply = data?.choices?.[0]?.message?.content?.trim();
+  if (!reply) throw new Error('Empty response. Please try again.');
+  return reply;
 };
 
 // ── Main FinanceAI component ───────────────────────────────────────────────────
-export const FinanceAI = ({ tripId, tripName, tripDestination, totalBudget, currencySymbol = '₹' }) => {
-  const [apiKey, setApiKey]       = useState(() => localStorage.getItem(LS_KEY) || '');
-  const [model, setModel]         = useState('gemini-2.5-flash');
-  const [messages, setMessages]   = useState([]);
-  const [inputText, setInputText] = useState('');
-  const [loading, setLoading]     = useState(false);
+export const FinanceAI = ({ tripId, tripName, tripDestination, totalBudget, currencySymbol = '₹', onGoToSettings }) => {
+  const [aiSettings, setAiSettings] = useState(() => loadAISettings());
+  const messagesEndRef = useRef(null);
+  const [messages, setMessages]     = useState([]);
+  const [inputText, setInputText]   = useState('');
+  const [loading, setLoading]       = useState(false);
   const [loadingLabel, setLoadingLabel] = useState('Thinking…');
-  const [error, setError]         = useState(null);
-  const [showKeyEdit, setShowKeyEdit] = useState(false);
-  const messagesEndRef             = useRef(null);
+  const [error, setError]           = useState(null);
 
-  const handleKeySaved = (key) => { setApiKey(key); setShowKeyEdit(false); };
-  const handleRemoveKey = () => {
-    if (!window.confirm('Remove your API key? You\'ll need to re-enter it to use the AI.')) return;
-    localStorage.removeItem(LS_KEY);
-    setApiKey('');
-    setMessages([]);
-  };
+  const { provider, apiKey, model } = aiSettings;
+
+  // Re-read settings whenever user focuses the tab (so Settings changes take effect)
+  useEffect(() => {
+    const onFocus = () => setAiSettings(loadAISettings());
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   useEffect(() => {
     if (!apiKey) return;
     setMessages([{
       id: 'welcome', sender: 'ai',
-      text: `Hi! I'm your **Wandr AI Advisor** 🤖\n\nI have full access to your trip **"${tripName}"** and can answer any travel question:\n* 💰 Budget, expenses & balances\n* 🗓️ Full itinerary & locations\n* 🌤️ Live weather for ${tripDestination || 'your destination'}\n* 🗺️ Mapped stops & coordinates\n* 🌍 Visa, currency, culture, food, safety & more\n\n_Ask me anything — powered by Google Gemini._`,
+      text: `Hi! I'm your **Wandr AI Advisor** 🤖\n\nI have full access to your trip **"${tripName}"** and can answer any travel question:\n* 💰 Budget, expenses & balances\n* 🗓️ Full itinerary & locations\n* 🌤️ Live weather for ${tripDestination || 'your destination'}\n* 🗺️ Mapped stops & coordinates\n* 🌍 Visa, currency, culture, food, safety & more\n\n_Ask me anything — powered by **${provider.name}**._`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }]);
     setError(null);
-  }, [tripId, tripName, apiKey]);
+  }, [tripId, tripName, apiKey, provider.id]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
@@ -311,33 +302,17 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
 
   const sendMessage = async (text) => {
     if (!text.trim() || loading) return;
+    const current = loadAISettings(); // Always read fresh settings
+    setAiSettings(current);
     setInputText(''); setError(null);
     const userMsg = { id: 'user-'+Date.now(), sender: 'user', text, timestamp: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) };
     setMessages(prev => [...prev, userMsg]);
     setLoading(true); setLoadingLabel('Thinking…');
     try {
       const systemPrompt = await buildSystemPrompt(text);
+      // Build history in Gemini format (used for Gemini; converted for others inside callProviderAPI)
       const history = messages.slice(-12).map(m => ({ role: m.sender==='user'?'user':'model', parts: [{ text: m.text }] }));
-      const res = await fetch(`${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [...history, { role: 'user', parts: [{ text }] }],
-          generationConfig: { temperature: 0.75, maxOutputTokens: 2000 },
-        }),
-      });
-      if (res.status === 401 || res.status === 403) {
-        throw new Error('API key rejected (403). Your key may have HTTP referrer restrictions. Remove them at aistudio.google.com/app/apikey or create a new unrestricted key.');
-      }
-      if (res.status === 429) throw new Error('Too many requests — please wait a moment and try again.');
-      if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message||`HTTP ${res.status}`); }
-      const data = await res.json();
-      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      if (!reply) {
-        if (data?.candidates?.[0]?.finishReason === 'SAFETY') throw new Error('Blocked by safety filters. Try rephrasing.');
-        throw new Error('Empty response. Please try again.');
-      }
+      const reply = await callProviderAPI(current.provider, current.apiKey, current.model, systemPrompt, history, text);
       setMessages(prev => [...prev, { id: 'ai-'+Date.now(), sender: 'ai', text: reply, timestamp: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) }]);
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
@@ -345,7 +320,7 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
   };
 
   const handleSubmit = (e) => { e.preventDefault(); sendMessage(inputText); };
-  const handleClear  = () => {
+  const handleClear = () => {
     if (!window.confirm('Clear conversation?')) return;
     setMessages([{ id: 'welcome-'+Date.now(), sender: 'ai', text: `Cleared! Ask me anything about **"${tripName}"**.`, timestamp: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) }]);
     setError(null);
@@ -362,24 +337,11 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
     { icon: Lightbulb,     label: 'Local Customs',     q: `What local customs and cultural tips should I know for ${tripDestination||'my destination'}?` },
   ];
 
-  // ── No key set → show setup screen ──────────────────────────────────────────
+  // ── No key set → redirect to Settings ────────────────────────────────────────
   if (!apiKey) {
     return (
       <div className="bg-white rounded-3xl shadow-md border border-gray-100/50 p-6 md:p-8 flex flex-col h-[calc(100vh-140px)] min-h-[500px] font-sans">
-        <ApiKeySetup onKeySaved={handleKeySaved} />
-      </div>
-    );
-  }
-
-  // ── Key edit mode ────────────────────────────────────────────────────────────
-  if (showKeyEdit) {
-    return (
-      <div className="bg-white rounded-3xl shadow-md border border-gray-100/50 p-6 md:p-8 flex flex-col h-[calc(100vh-140px)] min-h-[500px] font-sans">
-        <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
-          <h2 className="font-extrabold text-primary">Update API Key</h2>
-          <button onClick={() => setShowKeyEdit(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-slate-100"><X className="w-4 h-4" /></button>
-        </div>
-        <ApiKeySetup onKeySaved={handleKeySaved} />
+        <NoProviderSetup onGoToSettings={onGoToSettings} />
       </div>
     );
   }
@@ -396,22 +358,26 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
             <h2 className="font-extrabold text-lg text-primary tracking-tight">AI Travel Advisor</h2>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Budget · Weather · Map · Visa · Culture · Q&A</span>
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                {provider.name} · {provider.models.find(m => m.id === model)?.name || model}
+              </span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Model selector */}
-          <div className="hidden sm:flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl">
-            <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <select value={model} onChange={e => setModel(e.target.value)} className="text-[10px] font-bold bg-transparent border-none p-0 focus:ring-0 text-gray-600 focus:outline-none cursor-pointer">
-              {MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
+          {/* Provider badge */}
+          <div className={`hidden sm:flex items-center gap-1.5 bg-gradient-to-br ${provider.color} px-2.5 py-1.5 rounded-xl`}>
+            <span className="text-white text-sm">{provider.logo}</span>
+            <span className="text-[10px] font-bold text-white">{provider.name}</span>
           </div>
-          {/* Key button */}
-          <button onClick={() => setShowKeyEdit(true)} className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all" title="Update API key"><Key className="w-4 h-4" /></button>
+          {/* Settings link */}
+          <button onClick={onGoToSettings} className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all" title="AI Settings">
+            <Settings className="w-4 h-4" />
+          </button>
           {/* Clear */}
-          <button onClick={handleClear} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Clear conversation"><Trash2 className="w-4 h-4" /></button>
+          <button onClick={handleClear} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Clear conversation">
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -423,7 +389,7 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
               {msg.sender==='user' ? (msg.text[0]?.toUpperCase()||'U') : <Bot className="w-4 h-4" />}
             </div>
             <div className="space-y-1 min-w-0">
-              <div className={`p-4 rounded-3xl shadow-sm border ${msg.sender==='user'?'bg-accent/15 border-accent/20 text-primary rounded-tr-none':'bg-slate-50 border-slate-150 text-gray-700 rounded-tl-none'}`}>
+              <div className={`p-4 rounded-3xl shadow-sm border ${msg.sender==='user'?'bg-accent/15 border-accent/20 text-primary rounded-tr-none':'bg-slate-50 border-slate-100 text-gray-700 rounded-tl-none'}`}>
                 {msg.sender==='ai' ? <div className="space-y-1">{renderMarkdown(msg.text)}</div> : <p className="text-sm leading-relaxed">{msg.text}</p>}
               </div>
               <p className={`text-[9px] text-gray-400 font-bold uppercase px-1.5 ${msg.sender==='user'?'text-right':'text-left'}`}>{msg.timestamp}</p>
@@ -434,7 +400,7 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
         {loading && (
           <div className="flex gap-3 mr-auto max-w-[85%]">
             <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm flex-shrink-0"><Bot className="w-4 h-4" /></div>
-            <div className="bg-slate-50 border border-slate-150 p-4 rounded-3xl rounded-tl-none shadow-sm flex items-center gap-2">
+            <div className="bg-slate-50 border border-slate-100 p-4 rounded-3xl rounded-tl-none shadow-sm flex items-center gap-2">
               <Loader2 className="w-4 h-4 text-primary animate-spin" />
               <span className="text-xs text-gray-500 font-bold animate-pulse">{loadingLabel}</span>
             </div>
@@ -447,9 +413,9 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
             <div>
               <p className="font-extrabold text-red-600 mb-1">Couldn't get a response</p>
               <p className="text-red-500 leading-relaxed">{error}</p>
-              {error.includes('403') && (
-                <button onClick={() => setShowKeyEdit(true)} className="mt-2 text-xs font-bold text-primary underline">Update API key →</button>
-              )}
+              <button onClick={onGoToSettings} className="mt-2 text-xs font-bold text-primary underline">
+                Check AI Settings →
+              </button>
             </div>
           </div>
         )}
@@ -471,7 +437,7 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
           <div className="flex flex-wrap gap-1.5">
             {SUGGESTIONS.map(s => (
               <button key={s} onClick={() => sendMessage(s)}
-                className="text-[11px] font-bold px-2.5 py-1 bg-accent/8 text-accent rounded-lg hover:bg-accent/20 transition-colors border border-accent/10">{s}</button>
+                className="text-[11px] font-bold px-2.5 py-1 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors border border-accent/10">{s}</button>
             ))}
           </div>
         </div>
@@ -481,7 +447,7 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
       <form onSubmit={handleSubmit} className="border-t border-gray-100 pt-4 flex gap-2">
         <input type="text" disabled={loading} value={inputText} onChange={e => setInputText(e.target.value)}
           placeholder={loading ? loadingLabel : 'Ask about budget, weather, visa, culture, maps, or anything…'}
-          className="flex-1 text-sm rounded-2xl border-gray-200 px-4 py-3 border focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-transparent bg-white text-gray-800 transition-all font-sans disabled:opacity-60" />
+          className="flex-1 text-sm rounded-2xl border border-gray-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-transparent bg-white text-gray-800 transition-all font-sans disabled:opacity-60" />
         <button type="submit" disabled={loading || !inputText.trim()}
           className="p-3.5 bg-primary hover:bg-primary/95 text-white rounded-2xl shadow hover:shadow-md flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed">
           <Send className="w-4 h-4" />
@@ -489,9 +455,9 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
       </form>
 
       <p className="text-[10px] text-gray-400 text-center mt-2 font-medium">
-        Powered by <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-accent">Google Gemini</a>
-        {' '}· Your key stays on your device only ·{' '}
-        <button onClick={() => setShowKeyEdit(true)} className="underline hover:text-accent">Change key</button>
+        Powered by <strong>{provider.name}</strong>
+        {' '}· Key stored in your browser only ·{' '}
+        <button onClick={onGoToSettings} className="underline hover:text-accent">Change in Settings</button>
       </p>
     </div>
   );

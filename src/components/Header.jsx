@@ -180,7 +180,7 @@ export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTr
                     setShowDropdown(false);
                     if (onLogout) onLogout();
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-650 font-medium transition-all duration-200"
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 font-medium transition-all duration-200"
                 >
                   Sign Out
                 </button>

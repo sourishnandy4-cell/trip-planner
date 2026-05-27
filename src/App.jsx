@@ -11,7 +11,8 @@ import {
   mockDeleteTrip,
   saveMockData,
 } from './lib/mockDatabase';
-import { Loader2, Sparkles, MapPin, Calendar, DollarSign, Compass, ArrowRight, BookOpen, Trash2 } from 'lucide-react';
+import { Loader2, Sparkles, MapPin, Calendar, DollarSign, Compass, ArrowRight, BookOpen, Trash2, Settings } from 'lucide-react';
+import { AISettingsPanel } from './components/AISettings';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -875,7 +876,25 @@ function App() {
               tripDestination={tripMeta.destination}
               totalBudget={Number(tripMeta.total_budget)}
               currencySymbol={currentUser.currencySymbol || '₹'}
+              onGoToSettings={() => setActiveTab('settings')}
             />
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="animate-fadeIn max-w-lg mx-auto">
+              <div className="bg-white rounded-3xl shadow-md border border-gray-100/50 p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                  <div className="p-2.5 bg-primary/10 rounded-2xl">
+                    <Settings className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-extrabold text-lg text-primary tracking-tight">AI Settings</h2>
+                    <p className="text-xs text-gray-400">Choose your AI provider and configure your API key.</p>
+                  </div>
+                </div>
+                <AISettingsPanel onSaved={() => {}} />
+              </div>
+            </div>
           )}
         </div>
       </div>

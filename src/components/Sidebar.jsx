@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, MapPin, Receipt, FileText, LogOut, Plane, Bot, Users, X, Map, Cloud } from 'lucide-react';
+import { LayoutDashboard, MapPin, Receipt, FileText, LogOut, Plane, Bot, Users, X, Map, Cloud, Settings } from 'lucide-react';
 
 export const Sidebar = ({ activeTab = 'dashboard', onTabChange, user, onLogout, onProfileClick, isOpen, onClose }) => {
   const navItems = [
@@ -11,6 +11,7 @@ export const Sidebar = ({ activeTab = 'dashboard', onTabChange, user, onLogout, 
     { id: 'members', label: 'Members', icon: Users },
     { id: 'docs', label: 'Docs', icon: FileText },
     { id: 'ai', label: 'Finance AI', icon: Bot },
+    { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
