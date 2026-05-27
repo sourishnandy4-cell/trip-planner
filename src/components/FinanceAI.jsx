@@ -64,16 +64,18 @@ const renderMarkdown = (text) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Pollinations AI — completely free, no API key required
-// Uses the OpenAI-compatible endpoint at text.pollinations.ai/openai
-const POLLINATIONS_URL = 'https://text.pollinations.ai/openai';
+// New unified endpoint (migrated from text.pollinations.ai/openai — that URL is now dead)
+const POLLINATIONS_CHAT_URL = 'https://gen.pollinations.ai/v1/chat/completions';
+// Fallback: simple GET-based endpoint (truly anonymous, no key ever needed)
+const POLLINATIONS_GET_URL  = 'https://text.pollinations.ai';
 
-// Available free models on Pollinations (no key required)
+// Available free models on Pollinations gen.pollinations.ai
 const MODELS = [
-  { id: 'openai-large',    name: 'GPT-4o (Best)' },
-  { id: 'openai',          name: 'GPT-4o mini (Fast)' },
-  { id: 'mistral',         name: 'Mistral' },
-  { id: 'deepseek',        name: 'DeepSeek' },
-  { id: 'claude-hybridspace', name: 'Claude (Hybrid)' },
+  { id: 'openai',       name: 'GPT-4o mini (Fast)' },
+  { id: 'openai-large', name: 'GPT-4o (Best)' },
+  { id: 'mistral',      name: 'Mistral' },
+  { id: 'deepseek',     name: 'DeepSeek' },
+  { id: 'gemini',       name: 'Gemini Flash' },
 ];
 
 const SUGGESTIONS = [
@@ -168,36 +170,48 @@ Rules:
         content: m.text,
       }));
 
-      const res = await fetch(POLLINATIONS_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...history,
-            { role: 'user', content: text },
-          ],
-          seed: Math.floor(Math.random() * 99999),
-          private: true,
-          stream: false,
-        }),
-      });
+      // ── Try primary: gen.pollinations.ai (new unified endpoint, no key needed) ──
+      let reply = null;
+      try {
+        const res = await fetch(POLLINATIONS_CHAT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              ...history,
+              { role: 'user', content: text },
+            ],
+            seed: Math.floor(Math.random() * 99999),
+            private: true,
+            stream: false,
+          }),
+        });
 
-      if (res.status === 429) {
-        throw new Error('Rate limit reached. Pollinations allows 1 request per ~15 s on the free tier. Please wait a moment and try again.');
-      }
-      if (!res.ok) {
-        const errBody = await res.text().catch(() => '');
-        let errMsg = `AI service returned HTTP ${res.status}.`;
-        try { errMsg = JSON.parse(errBody)?.error?.message || errMsg; } catch {}
-        throw new Error(errMsg + ' Try again in a moment.');
+        if (res.status === 429) throw new Error('rate_limit');
+        if (res.ok) {
+          const data = await res.json();
+          reply = (data?.choices?.[0]?.message?.content || '').trim();
+        }
+      } catch (primaryErr) {
+        if (primaryErr.message === 'rate_limit') {
+          throw new Error('Rate limit reached. Please wait ~15 seconds and try again.');
+        }
+        // Primary failed — fall through to GET fallback
+        console.warn('Pollinations primary endpoint failed, trying fallback:', primaryErr.message);
       }
 
-      const data = await res.json();
-      const reply = (data?.choices?.[0]?.message?.content || '').trim();
+      // ── Fallback: simple GET endpoint (always anonymous, no auth required) ──
+      if (!reply) {
+        const fullPrompt = `${systemPrompt}\n\nUser: ${text}\n\nAssistant:`;
+        const encoded = encodeURIComponent(fullPrompt);
+        const fallbackUrl = `${POLLINATIONS_GET_URL}/${encoded}?model=${model}&private=true&seed=${Math.floor(Math.random() * 99999)}`;
+        const res = await fetch(fallbackUrl);
+        if (!res.ok) throw new Error(`AI service unavailable (HTTP ${res.status}). Please try again shortly.`);
+        reply = (await res.text()).trim();
+      }
+
       if (!reply) throw new Error('The AI returned an empty response. Please try again.');
 
       setMessages(prev => [...prev, {
