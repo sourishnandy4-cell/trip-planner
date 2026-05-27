@@ -5,6 +5,8 @@ import { supabase, isMockMode } from './lib/supabaseClient';
 import {
   MOCK_TRIPS,
   MOCK_TRIP_MEMBERS,
+  MOCK_ITINERARY_ITEMS,
+  MOCK_EXPENSES,
   mockFetchTripMeta,
   mockDeleteTrip,
   saveMockData,
@@ -122,28 +124,82 @@ function App() {
   useEffect(() => {
     const processInvite = async () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const inviteTripId = urlParams.get('invite');
-      
+      const joinPayload = urlParams.get('join');   // new encoded snapshot link
+      const inviteTripId = urlParams.get('invite'); // legacy supabase link
+
+      const clearUrl = () => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('join');
+        url.searchParams.delete('invite');
+        window.history.replaceState({}, '', url);
+      };
+
+      // ── New encoded snapshot join (works in mock mode) ──────────────────
+      if (joinPayload && currentUser) {
+        try {
+          const json = decodeURIComponent(escape(atob(joinPayload)));
+          const { trip, members, itinerary, expenses } = JSON.parse(json);
+
+          if (!trip) throw new Error('Invalid share link — trip data missing.');
+
+          // Import trip if not already present
+          if (!MOCK_TRIPS.find(t => t.id === trip.id)) {
+            MOCK_TRIPS.push(trip);
+          }
+
+          // Merge members, adding the current user
+          const existingMembers = MOCK_TRIP_MEMBERS.find(m => m.trip_id === trip.id);
+          const incomingMembers = members?.members || [];
+          if (!incomingMembers.includes(currentUser.name)) incomingMembers.push(currentUser.name);
+
+          if (existingMembers) {
+            incomingMembers.forEach(m => { if (!existingMembers.members.includes(m)) existingMembers.members.push(m); });
+          } else {
+            MOCK_TRIP_MEMBERS.push({ trip_id: trip.id, members: incomingMembers });
+          }
+
+          // Import itinerary items
+          if (Array.isArray(itinerary)) {
+            itinerary.forEach(item => {
+              if (!MOCK_ITINERARY_ITEMS.find(i => i.id === item.id)) MOCK_ITINERARY_ITEMS.push(item);
+            });
+          }
+
+          // Import expenses
+          if (Array.isArray(expenses)) {
+            expenses.forEach(exp => {
+              if (!MOCK_EXPENSES.find(e => e.id === exp.id)) MOCK_EXPENSES.push(exp);
+            });
+          }
+
+          saveMockData();
+          clearUrl();
+
+          localStorage.setItem('wandr_active_trip_id', trip.id);
+          setActiveTripId(trip.id);
+          await fetchExistingTrips();
+          alert(`✅ You've joined "${trip.name}"! The full itinerary and expenses have been imported.`);
+
+        } catch (err) {
+          console.error('Failed to process join link:', err);
+          alert('This share link appears to be invalid or corrupted. Ask the trip organiser to generate a new one.');
+          clearUrl();
+        }
+        return;
+      }
+
+      // ── Legacy Supabase invite link ──────────────────────────────────────
       if (inviteTripId && currentUser) {
         try {
           let tripExists = false;
-          let tripData = null;
-          
+
           if (isMockMode) {
             tripExists = MOCK_TRIPS.some(t => t.id === inviteTripId);
-            tripData = MOCK_TRIPS.find(t => t.id === inviteTripId);
-            
-            // If trip doesn't exist in this user's localStorage, it means they're joining from another user
-            // In mock mode, we can't share data across browsers, so show an error
             if (!tripExists) {
-              alert('⚠️ Mock Mode Limitation: This trip was created by another user. In mock mode (localStorage), trips cannot be shared across different browsers or users.\n\nTo enable real trip sharing:\n1. Set up Supabase backend\n2. Or ask the trip creator to share trip details manually');
-              const url = new URL(window.location.href);
-              url.searchParams.delete('invite');
-              window.history.replaceState({}, '', url);
+              alert('This trip could not be found. Ask the organiser to share using the Invite button inside the trip.');
+              clearUrl();
               return;
             }
-
-            // Mock mode join
             const existingMemberRecord = MOCK_TRIP_MEMBERS.find(m => m.trip_id === inviteTripId);
             if (existingMemberRecord) {
               if (!existingMemberRecord.members.includes(currentUser.name)) {
@@ -151,70 +207,27 @@ function App() {
                 saveMockData();
               }
             } else {
-              MOCK_TRIP_MEMBERS.push({
-                trip_id: inviteTripId,
-                members: [currentUser.name],
-              });
+              MOCK_TRIP_MEMBERS.push({ trip_id: inviteTripId, members: [currentUser.name] });
               saveMockData();
             }
           } else {
-            // First add the user to trip_members so they pass RLS SELECT policies on the trip
             const { error: joinErr } = await supabase.from('trip_members').insert([{
-              trip_id: inviteTripId,
-              user_id: currentUser.id,
-              role: 'member'
+              trip_id: inviteTripId, user_id: currentUser.id, role: 'member'
             }]);
-            
-            if (joinErr) {
-              if (joinErr.code === '23503') {
-                // Foreign key constraint violation (trip does not exist)
-                tripExists = false;
-              } else if (joinErr.code === '23505') {
-                // Unique constraint violation (already a member of this trip)
-                tripExists = true;
-              } else {
-                // Other database errors
-                throw joinErr;
-              }
-            } else {
-              tripExists = true;
-            }
-
-            if (tripExists) {
-              // Now they are a member, they can fetch trip metadata
-              const { data: fetchedTrip, error: tripErr } = await supabase
-                .from('trips')
-                .select('id, name, destination, start_date, end_date, total_budget')
-                .eq('id', inviteTripId)
-                .single();
-              
-              if (tripErr) {
-                tripExists = false;
-              } else {
-                tripData = fetchedTrip;
-              }
-            }
+            if (joinErr && joinErr.code !== '23505') throw joinErr;
+            tripExists = true;
           }
-          
-          // Clear URL parameter without refreshing page
-          const url = new URL(window.location.href);
-          url.searchParams.delete('invite');
-          window.history.replaceState({}, '', url);
 
-          // Set active trip to the invited trip
+          clearUrl();
           localStorage.setItem('wandr_active_trip_id', inviteTripId);
           setActiveTripId(inviteTripId);
-          
-          // Refresh trips
           await fetchExistingTrips();
           alert('You have successfully joined the trip!');
 
         } catch (err) {
           console.error('Failed to join trip:', err);
           alert('Failed to join the trip. Please try again or contact the trip organizer.');
-          const url = new URL(window.location.href);
-          url.searchParams.delete('invite');
-          window.history.replaceState({}, '', url);
+          clearUrl();
         }
       }
     };
