@@ -6,62 +6,218 @@ import {
   ShieldAlert, Ambulance, Flame,
 } from 'lucide-react';
 
-// ── Region-aware emergency contacts ──────────────────────────────────────────
+// ── Emergency contacts per country ───────────────────────────────────────────
 const EMERGENCY_CONTACTS = {
   IN: {
     label: '🇮🇳 India',
     lines: [
-      { icon: '🚔', label: 'Police',              number: '100'           },
-      { icon: '🚑', label: 'Ambulance',            number: '102'           },
-      { icon: '🔥', label: 'Fire',                 number: '101'           },
-      { icon: '🆘', label: 'All Emergencies (new)',number: '112'           },
-      { icon: '👩', label: "Women's Helpline",     number: '1091'          },
-      { icon: '✈️', label: 'Tourist Helpline',      number: '1800-111-363'  },
-      { icon: '🏥', label: 'Medical Helpline',      number: '104'           },
+      { icon: '🚔', label: 'Police',               number: '100'           },
+      { icon: '🚑', label: 'Ambulance',             number: '102'           },
+      { icon: '🔥', label: 'Fire',                  number: '101'           },
+      { icon: '🆘', label: 'All Emergencies',       number: '112'           },
+      { icon: '👩', label: "Women's Helpline",      number: '1091'          },
+      { icon: '✈️', label: 'Tourist Helpline',       number: '1800-111-363'  },
+      { icon: '🏥', label: 'Medical Helpline',       number: '104'           },
     ],
   },
   US: {
     label: '🇺🇸 United States',
     lines: [
-      { icon: '🆘', label: 'All Emergencies',      number: '911'           },
-      { icon: '🚔', label: 'Non-Emergency Police', number: '311'           },
-      { icon: '☠️', label: 'Poison Control',        number: '1-800-222-1222'},
-      { icon: '🧠', label: 'Mental Health / Crisis',number: '988'           },
-      { icon: '✈️', label: 'Travel State Dept',     number: '1-888-407-4747'},
+      { icon: '🆘', label: 'All Emergencies',       number: '911'           },
+      { icon: '🚔', label: 'Non-Emergency Police',  number: '311'           },
+      { icon: '☠️', label: 'Poison Control',         number: '1-800-222-1222'},
+      { icon: '🧠', label: 'Mental Health / Crisis', number: '988'           },
+      { icon: '✈️', label: 'Travel State Dept',      number: '1-888-407-4747'},
     ],
   },
   EU: {
     label: '🇪🇺 Europe (Schengen)',
     lines: [
-      { icon: '🆘', label: 'Pan-EU Emergency',     number: '112'           },
-      { icon: '🚔', label: 'Police (DE)',           number: '110'           },
-      { icon: '🚔', label: 'Police (FR)',           number: '17'            },
-      { icon: '🚔', label: 'Police (ES/IT)',        number: '112'           },
-      { icon: '🚑', label: 'Medical (FR)',          number: '15'            },
-      { icon: '🚑', label: 'Medical (IT)',          number: '118'           },
-      { icon: '🔥', label: 'Fire (DE)',             number: '112'           },
+      { icon: '🆘', label: 'Pan-EU Emergency',      number: '112'           },
+      { icon: '🚔', label: 'Police (DE)',            number: '110'           },
+      { icon: '🚔', label: 'Police (FR)',            number: '17'            },
+      { icon: '🚔', label: 'Police (ES/IT)',         number: '112'           },
+      { icon: '🚑', label: 'Medical (FR)',           number: '15'            },
+      { icon: '🚑', label: 'Medical (IT)',           number: '118'           },
+      { icon: '🔥', label: 'Fire (DE)',              number: '112'           },
     ],
   },
   UK: {
     label: '🇬🇧 United Kingdom',
     lines: [
-      { icon: '🆘', label: 'All Emergencies',      number: '999'           },
-      { icon: '🚔', label: 'Non-Emergency Police', number: '101'           },
-      { icon: '🏥', label: 'NHS Non-Emergency',    number: '111'           },
-      { icon: '🧠', label: 'Samaritans (crisis)',  number: '116 123'       },
-      { icon: '✈️', label: 'FCO Travel Advice',    number: '020 7008 5000' },
+      { icon: '🆘', label: 'All Emergencies',       number: '999'           },
+      { icon: '🚔', label: 'Non-Emergency Police',  number: '101'           },
+      { icon: '🏥', label: 'NHS Non-Emergency',     number: '111'           },
+      { icon: '🧠', label: 'Samaritans (crisis)',   number: '116 123'       },
+      { icon: '✈️', label: 'FCO Travel Advice',     number: '020 7008 5000' },
     ],
   },
   JP: {
     label: '🇯🇵 Japan',
     lines: [
-      { icon: '🚔', label: 'Police',               number: '110'           },
-      { icon: '🚑', label: 'Ambulance & Fire',      number: '119'           },
-      { icon: '✈️', label: 'Tourist Hotline (24h)', number: '050-3816-2787' },
-      { icon: '🆘', label: 'Japan Helpline (EN)',   number: '0120-461-997'  },
-      { icon: '🏥', label: 'Medical (Tokyo)',       number: '03-5285-8181'  },
+      { icon: '🚔', label: 'Police',                number: '110'           },
+      { icon: '🚑', label: 'Ambulance & Fire',       number: '119'           },
+      { icon: '✈️', label: 'Tourist Hotline (24h)',  number: '050-3816-2787' },
+      { icon: '🆘', label: 'Japan Helpline (EN)',    number: '0120-461-997'  },
+      { icon: '🏥', label: 'Medical (Tokyo)',        number: '03-5285-8181'  },
     ],
   },
+  AU: {
+    label: '🇦🇺 Australia',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '000'           },
+      { icon: '🚔', label: 'Police (non-emergency)',number: '131 444'       },
+      { icon: '🏥', label: 'Health Direct',         number: '1800 022 222'  },
+      { icon: '🧠', label: 'Lifeline (crisis)',     number: '13 11 14'      },
+    ],
+  },
+  SG: {
+    label: '🇸🇬 Singapore',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '999'           },
+      { icon: '🚑', label: 'Ambulance & Fire',       number: '995'           },
+      { icon: '🏥', label: 'Non-Emergency Ambulance',number: '1777'         },
+      { icon: '✈️', label: 'Tourist Hotline',        number: '1800-736-2000' },
+    ],
+  },
+  TH: {
+    label: '🇹🇭 Thailand',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '191'           },
+      { icon: '🚑', label: 'Ambulance',             number: '1669'          },
+      { icon: '🔥', label: 'Fire',                  number: '199'           },
+      { icon: '✈️', label: 'Tourist Police',         number: '1155'          },
+    ],
+  },
+  AE: {
+    label: '🇦🇪 UAE / Dubai',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '999'           },
+      { icon: '🚑', label: 'Ambulance',             number: '998'           },
+      { icon: '🔥', label: 'Fire',                  number: '997'           },
+      { icon: '✈️', label: 'Tourism (Dubai)',        number: '800-DXB (392)' },
+    ],
+  },
+  FR: {
+    label: '🇫🇷 France',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies (EU)',  number: '112'           },
+      { icon: '🚔', label: 'Police',                number: '17'            },
+      { icon: '🚑', label: 'SAMU (Medical)',        number: '15'            },
+      { icon: '🔥', label: 'Fire (Pompiers)',       number: '18'            },
+      { icon: '🏥', label: 'Medical Helpline',      number: '3114'          },
+    ],
+  },
+  DE: {
+    label: '🇩🇪 Germany',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies (EU)',  number: '112'           },
+      { icon: '🚔', label: 'Police',                number: '110'           },
+      { icon: '🚑', label: 'Ambulance',             number: '112'           },
+      { icon: '🏥', label: 'Medical Advice',        number: '116 117'       },
+    ],
+  },
+  IT: {
+    label: '🇮🇹 Italy',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies (EU)',  number: '112'           },
+      { icon: '🚔', label: 'Carabinieri (Police)',  number: '112'           },
+      { icon: '🚑', label: 'Ambulance',             number: '118'           },
+      { icon: '🔥', label: 'Fire',                  number: '115'           },
+    ],
+  },
+  ES: {
+    label: '🇪🇸 Spain',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies (EU)',  number: '112'           },
+      { icon: '🚔', label: 'Police (Nacional)',     number: '091'           },
+      { icon: '🚑', label: 'Ambulance',             number: '061'           },
+      { icon: '🔥', label: 'Fire',                  number: '080'           },
+    ],
+  },
+  CN: {
+    label: '🇨🇳 China',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '110'           },
+      { icon: '🚑', label: 'Ambulance',             number: '120'           },
+      { icon: '🔥', label: 'Fire',                  number: '119'           },
+      { icon: '✈️', label: 'Tourist Complaint',     number: '12301'         },
+    ],
+  },
+  KR: {
+    label: '🇰🇷 South Korea',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '112'           },
+      { icon: '🚑', label: 'Ambulance & Fire',       number: '119'           },
+      { icon: '✈️', label: 'Tourist Helpline (EN)',  number: '1330'          },
+      { icon: '🏥', label: 'Medical Interpreter',   number: '02-2072-0505'  },
+    ],
+  },
+  MX: {
+    label: '🇲🇽 Mexico',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '911'           },
+      { icon: '✈️', label: 'Tourist Assistance',    number: '078'           },
+      { icon: '🚑', label: 'Cruz Roja (Ambulance)', number: '065'           },
+    ],
+  },
+  BR: {
+    label: '🇧🇷 Brazil',
+    lines: [
+      { icon: '🚔', label: 'Police (Military)',     number: '190'           },
+      { icon: '🚑', label: 'SAMU (Ambulance)',      number: '192'           },
+      { icon: '🔥', label: 'Fire',                  number: '193'           },
+      { icon: '🆘', label: 'Civil Defense',         number: '199'           },
+    ],
+  },
+};
+
+// ── Destination → region code mapper ─────────────────────────────────────────
+const DESTINATION_MAP = [
+  // Japan
+  { keys: ['japan','tokyo','osaka','kyoto','hiroshima','nagoya','sapporo','fukuoka','okinawa','nara','shibuya','shinjuku','akihabara'], code: 'JP' },
+  // USA
+  { keys: ['usa','united states','america','new york','los angeles','san francisco','chicago','miami','las vegas','hawaii','california','texas','boston','seattle','washington dc','dc'], code: 'US' },
+  // UK
+  { keys: ['uk','united kingdom','england','britain','london','manchester','edinburgh','scotland','wales','birmingham','liverpool'], code: 'UK' },
+  // Australia
+  { keys: ['australia','sydney','melbourne','brisbane','perth','adelaide','cairns','gold coast'], code: 'AU' },
+  // Singapore
+  { keys: ['singapore'], code: 'SG' },
+  // Thailand
+  { keys: ['thailand','bangkok','phuket','chiang mai','koh samui','pattaya'], code: 'TH' },
+  // UAE
+  { keys: ['uae','dubai','abu dhabi','united arab emirates','sharjah'], code: 'AE' },
+  // France
+  { keys: ['france','paris','lyon','marseille','nice','bordeaux','strasbourg'], code: 'FR' },
+  // Germany
+  { keys: ['germany','berlin','munich','hamburg','frankfurt','cologne','stuttgart'], code: 'DE' },
+  // Italy
+  { keys: ['italy','rome','milan','venice','florence','naples','sicily','turin'], code: 'IT' },
+  // Spain
+  { keys: ['spain','madrid','barcelona','seville','valencia','malaga','ibiza'], code: 'ES' },
+  // China
+  { keys: ['china','beijing','shanghai','guangzhou','shenzhen','chengdu','hong kong'], code: 'CN' },
+  // South Korea
+  { keys: ['south korea','korea','seoul','busan','jeju','incheon'], code: 'KR' },
+  // India
+  { keys: ['india','mumbai','delhi','bangalore','chennai','kolkata','hyderabad','jaipur','goa','kerala','agra'], code: 'IN' },
+  // Mexico
+  { keys: ['mexico','cancun','mexico city','guadalajara','playa del carmen','tulum'], code: 'MX' },
+  // Brazil
+  { keys: ['brazil','rio de janeiro','sao paulo','salvador','fortaleza'], code: 'BR' },
+  // Europe generic
+  { keys: ['europe','schengen','netherlands','amsterdam','belgium','brussels','switzerland','zurich','austria','vienna','portugal','lisbon','sweden','stockholm','norway','oslo','denmark','copenhagen','greece','athens','croatia','dubrovnik'], code: 'EU' },
+];
+
+// Returns region code from a destination string, falling back to user's region
+const detectRegionFromDestination = (destination, userRegion = 'IN') => {
+  if (!destination) return userRegion;
+  const lower = destination.toLowerCase();
+  for (const entry of DESTINATION_MAP) {
+    if (entry.keys.some(k => lower.includes(k))) return entry.code;
+  }
+  return userRegion;
 };
 
 const MAX_DOCS = 3;
@@ -102,8 +258,8 @@ const readAsBase64 = (file) =>
     reader.readAsDataURL(file);
   });
 
-export const TravelDocs = ({ tripId, currentUser }) => {
-  const region = currentUser?.region || 'IN';
+export const TravelDocs = ({ tripId, currentUser, tripDestination }) => {
+  const region = detectRegionFromDestination(tripDestination, currentUser?.region || 'IN');
   const emergency = EMERGENCY_CONTACTS[region] || EMERGENCY_CONTACTS.IN;
 
   const [activeSection, setActiveSection] = useState('notes');
@@ -285,7 +441,7 @@ export const TravelDocs = ({ tripId, currentUser }) => {
               <div className="p-1.5 bg-red-100 rounded-lg"><ShieldAlert className="w-4 h-4 text-red-500" /></div>
               <div>
                 <h3 className="font-extrabold text-sm text-red-700">Emergency Contacts — {emergency.label}</h3>
-                <p className="text-[10px] text-red-400 font-medium">Auto-populated based on your region setting</p>
+                <p className="text-[10px] text-red-400 font-medium">Auto-populated based on your trip destination</p>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -300,7 +456,7 @@ export const TravelDocs = ({ tripId, currentUser }) => {
               ))}
             </div>
             <p className="text-[10px] text-red-400 font-medium pl-1">
-              ℹ️ Region based on your profile. Update it in Profile settings to change these numbers.
+              ℹ️ Numbers match your trip destination. Change destination in Trip Settings to update.
             </p>
           </div>
 

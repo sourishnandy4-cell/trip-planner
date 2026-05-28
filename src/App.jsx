@@ -866,7 +866,7 @@ function App() {
           )}
 
           {activeTab === 'docs' && (
-            <TravelDocs tripId={tripMeta.id} currentUser={currentUser} />
+            <TravelDocs tripId={tripMeta.id} currentUser={currentUser} tripDestination={tripMeta.destination} />
           )}
 
           {activeTab === 'ai' && (
