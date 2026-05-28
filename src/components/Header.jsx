@@ -95,7 +95,7 @@ export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTr
   };
 
   return (
-    <header className="wandr-header" style={{ padding: '16px 20px', marginBottom: '24px' }}>
+    <header className="wandr-header" style={{ position: 'relative', zIndex: 50, padding: '16px 20px', marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
         {/* Left: Mobile Menu + Trip Info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
