@@ -810,7 +810,7 @@ function App() {
               backgroundImage: `url(${destBgUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center top',
-              opacity: 0.08,
+              opacity: 0.13,
               filter: 'saturate(1.3) blur(0px)',
             }}
           />
