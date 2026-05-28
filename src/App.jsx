@@ -19,6 +19,7 @@ function App() {
   const [tripMeta, setTripMeta] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [destBgUrl, setDestBgUrl] = useState(null);
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('wandr_user');
@@ -339,6 +340,26 @@ function App() {
   const handleRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
   };
+
+  // ── Fetch destination background image from Wikipedia (CSP-safe) ──────────
+  useEffect(() => {
+    if (!tripMeta?.destination) { setDestBgUrl(null); return; }
+    const city = tripMeta.destination.split(',')[0].trim();
+    let cancelled = false;
+    const fetchBg = async () => {
+      try {
+        const res = await fetch(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(city)}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const url = data?.originalimage?.source || data?.thumbnail?.source;
+        if (url && !cancelled) setDestBgUrl(url);
+      } catch {}
+    };
+    fetchBg();
+    return () => { cancelled = true; };
+  }, [tripMeta?.destination]);
 
   const handleLogout = async () => {
     if (!isMockMode) {
@@ -781,23 +802,19 @@ function App() {
       {/* Main Content Area */}
       <div className="md:ml-64 min-h-screen relative">
 
-        {/* ── Destination background image (faded, non-intrusive) ── */}
-        {tripMeta?.destination && (() => {
-          const keyword = encodeURIComponent(tripMeta.destination.split(',')[0].trim());
-          return (
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage: `url(https://source.unsplash.com/1600x900/?${keyword},travel,landscape)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center top',
-                backgroundAttachment: 'local',
-                opacity: 0.07,
-                filter: 'saturate(1.2)',
-              }}
-            />
-          );
-        })()}
+        {/* ── Destination background image via Wikipedia API (CSP-safe) ── */}
+        {destBgUrl && (
+          <div
+            className="absolute inset-0 pointer-events-none transition-opacity duration-1000"
+            style={{
+              backgroundImage: `url(${destBgUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center top',
+              opacity: 0.08,
+              filter: 'saturate(1.3) blur(0px)',
+            }}
+          />
+        )}
 
         <div className="relative max-w-7xl mx-auto p-6">
           {/* Header */}
