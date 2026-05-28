@@ -87,14 +87,38 @@ export const WeatherView = ({ tripDestination }) => {
     if (!tripDestination) { setError('No destination set for this trip.'); setLoading(false); return; }
     setLoading(true); setError(null);
     try {
+      let lat, lng, name, country;
+      const searchTerm = encodeURIComponent(tripDestination.split(',')[0].trim());
+
       // Geocode with Open-Meteo's own geocoding API (no key needed)
       const gRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(tripDestination.split(',')[0].trim())}&count=1&language=en&format=json`
+        `https://geocoding-api.open-meteo.com/v1/search?name=${searchTerm}&count=1&language=en&format=json`
       );
       const gData = await gRes.json();
-      if (!gData.results?.length) throw new Error(`No weather data found for "${tripDestination}". Try using just the city name.`);
-      const { latitude: lat, longitude: lng, name, country } = gData.results[0];
-      setLocName(`${name}, ${country}`);
+
+      if (gData.results?.length) {
+        ({ latitude: lat, longitude: lng, name, country } = gData.results[0]);
+        setLocName(`${name}${country ? `, ${country}` : ''}`);
+      } else {
+        // Fallback to Nominatim API for places Open-Meteo misses (like states or small towns)
+        const nRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${searchTerm}&format=json&limit=1`,
+          { headers: { 'Accept-Language': 'en-US,en;q=0.9' } }
+        );
+        const nData = await nRes.json();
+        
+        if (!nData?.length) {
+          throw new Error(`No weather data found for "${tripDestination}". Try using just the city name.`);
+        }
+        
+        lat = parseFloat(nData[0].lat);
+        lng = parseFloat(nData[0].lon);
+        name = nData[0].name;
+        
+        const displayParts = nData[0].display_name.split(',');
+        country = displayParts.length > 1 ? displayParts[displayParts.length - 1].trim() : '';
+        setLocName(`${name}${country ? `, ${country}` : ''}`);
+      }
 
       // Fetch 7-day forecast
       const wRes = await fetch(
