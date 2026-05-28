@@ -3,6 +3,59 @@
 
 import { supabase, USE_MOCK_MODE } from './supabaseClient';
 
+// ── Secure password hashing (Web Crypto API — zero dependencies) ──────────────
+const hashPassword = async (password, salt) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(salt + password + 'wandr_v1');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+const generateSalt = () => {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+const generateSessionToken = () => {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+// ── Mock user store helpers ───────────────────────────────────────────────────
+const getMockUsers = () => {
+  try {
+    const raw = localStorage.getItem('wandr_mock_users');
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+};
+
+const saveMockUsers = (users) => {
+  localStorage.setItem('wandr_mock_users', JSON.stringify(users));
+};
+
+// ── Active session store ──────────────────────────────────────────────────────
+// Each session token maps to an email, stored under wandr_sessions.
+// On login we generate a new token; on logout we remove it.
+const getSessions = () => {
+  try {
+    const raw = localStorage.getItem('wandr_sessions');
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+};
+const saveSessions = (s) => localStorage.setItem('wandr_sessions', JSON.stringify(s));
+
+export const validateMockSession = (token) => {
+  if (!token) return null;
+  const sessions = getSessions();
+  const email = sessions[token];
+  if (!email) return null;
+  const users = getMockUsers();
+  return users[email] || null;
+};
+
 /**
  * Sign up a new user
  * @param {Object} userData - { email, password, username }
@@ -10,16 +63,39 @@ import { supabase, USE_MOCK_MODE } from './supabaseClient';
  */
 export async function signUp({ email, password, username }) {
   if (USE_MOCK_MODE) {
-    // Mock mode - store in localStorage
+    const users = getMockUsers();
+    if (users[email]) {
+      throw new Error('An account with this email already exists. Please sign in.');
+    }
+
+    const salt = generateSalt();
+    const passwordHash = await hashPassword(password, salt);
+    const sessionToken = generateSessionToken();
+
     const mockUser = {
       id: `user-${Date.now()}`,
       email,
       username,
+      passwordHash,
+      salt,
       created_at: new Date().toISOString(),
     };
-    localStorage.setItem('mockUser', JSON.stringify(mockUser));
+
+    users[email] = mockUser;
+    saveMockUsers(users);
+
+    // Create session
+    const sessions = getSessions();
+    sessions[sessionToken] = email;
+    saveSessions(sessions);
+
     localStorage.setItem('username', username);
-    return { user: mockUser, error: null };
+    // Return safe user (no hash/salt)
+    return {
+      user: { id: mockUser.id, email, username, created_at: mockUser.created_at },
+      sessionToken,
+      error: null,
+    };
   }
 
   // Sign up with Supabase
@@ -55,14 +131,30 @@ export async function signUp({ email, password, username }) {
  */
 export async function login({ email, password }) {
   if (USE_MOCK_MODE) {
-    // Mock mode - check localStorage
-    const mockUser = localStorage.getItem('mockUser');
-    if (mockUser) {
-      const user = JSON.parse(mockUser);
-      localStorage.setItem('username', user.username);
-      return { user, error: null };
+    const users = getMockUsers();
+    const storedUser = users[email];
+
+    if (!storedUser) {
+      throw new Error('No account found with this email. Please sign up first.');
     }
-    throw new Error('No account found. Please sign up first.');
+
+    // Verify password
+    const attemptHash = await hashPassword(password, storedUser.salt);
+    if (attemptHash !== storedUser.passwordHash) {
+      throw new Error('Incorrect password. Please try again.');
+    }
+
+    const sessionToken = generateSessionToken();
+    const sessions = getSessions();
+    sessions[sessionToken] = email;
+    saveSessions(sessions);
+
+    localStorage.setItem('username', storedUser.username);
+    return {
+      user: { id: storedUser.id, email, username: storedUser.username, created_at: storedUser.created_at },
+      sessionToken,
+      error: null,
+    };
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -86,9 +178,13 @@ export async function login({ email, password }) {
  * Log out the current user
  * @returns {Promise<void>}
  */
-export async function logout() {
+export async function logout(sessionToken) {
   if (USE_MOCK_MODE) {
-    localStorage.removeItem('mockUser');
+    if (sessionToken) {
+      const sessions = getSessions();
+      delete sessions[sessionToken];
+      saveSessions(sessions);
+    }
     localStorage.removeItem('username');
     localStorage.removeItem('tripMeta');
     localStorage.removeItem('itineraryItems');
@@ -106,9 +202,15 @@ export async function logout() {
  */
 export async function getCurrentUser() {
   if (USE_MOCK_MODE) {
-    const mockUser = localStorage.getItem('mockUser');
-    if (mockUser) {
-      return { user: JSON.parse(mockUser), error: null };
+    // Session-token based validation — NOT just checking any mockUser in localStorage
+    const sessionToken = sessionStorage.getItem('wandr_session_token');
+    if (!sessionToken) return { user: null, error: null };
+    const user = validateMockSession(sessionToken);
+    if (user) {
+      return {
+        user: { id: user.id, email: user.email, username: user.username, created_at: user.created_at },
+        error: null,
+      };
     }
     return { user: null, error: null };
   }

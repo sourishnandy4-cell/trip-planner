@@ -11,7 +11,7 @@ import {
   mockDeleteTrip,
   saveMockData,
 } from './lib/mockDatabase';
-import { Loader2, Sparkles, MapPin, Calendar, DollarSign, Compass, ArrowRight, BookOpen, Trash2, Settings } from 'lucide-react';
+import { Loader2, Sparkles, MapPin, Calendar, DollarSign, Compass, ArrowRight, BookOpen, Trash2, Settings, Info } from 'lucide-react';
 import { AISettingsPanel } from './components/AISettings';
 
 function App() {
@@ -343,6 +343,17 @@ function App() {
   const handleLogout = async () => {
     if (!isMockMode) {
       await supabase.auth.signOut();
+    } else {
+      // Clear session token so other users on this device can't hijack the session
+      const token = sessionStorage.getItem('wandr_session_token');
+      if (token) {
+        try {
+          const sessions = JSON.parse(localStorage.getItem('wandr_sessions') || '{}');
+          delete sessions[token];
+          localStorage.setItem('wandr_sessions', JSON.stringify(sessions));
+        } catch {}
+        sessionStorage.removeItem('wandr_session_token');
+      }
     }
     localStorage.removeItem('wandr_user');
     localStorage.removeItem('wandr_active_trip_id');
@@ -486,6 +497,15 @@ function App() {
   if (!activeTripId) {
     return (
       <div className="min-h-screen bg-[#F9F8F4] flex flex-col items-center justify-center p-4 md:p-6 font-sans">
+
+        {/* Demo Mode Banner */}
+        {isMockMode && (
+          <div className="w-full max-w-4xl mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-amber-800 text-xs">
+            <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-500" />
+            <span><strong>Demo Mode</strong> — You're in demo mode. Data is saved locally on this device only. Nothing is backed up to a cloud server.</span>
+          </div>
+        )}
+
         <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-5 gap-6 bg-white rounded-3xl shadow-xl border border-gray-100/50 p-6 md:p-8 hover:shadow-2xl transition-all duration-300 relative overflow-hidden">
           
           {/* Main Greeting (Header spans full width) */}
@@ -736,6 +756,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-warm-bg dark:bg-dark-bg transition-colors duration-200">
+
+      {/* ── Demo Mode Banner (sticky, always visible in mock mode) ── */}
+      {isMockMode && (
+        <div className="w-full flex items-center gap-2 bg-amber-50 border-b border-amber-200 px-4 py-2 text-amber-800 text-xs">
+          <Info className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
+          <span>
+            <strong>Demo Mode</strong> — data is saved locally on this device only. No cloud backup. Connect Supabase to go live.
+          </span>
+        </div>
+      )}
+
       {/* Sidebar */}
       <Sidebar 
         activeTab={activeTab} 

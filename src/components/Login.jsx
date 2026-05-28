@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Plane, Mail, Lock, User, ArrowRight, AlertCircle, Sparkles, Globe, UserCheck } from 'lucide-react';
+import { Plane, Mail, Lock, User, ArrowRight, AlertCircle, Sparkles, Globe, UserCheck, Info } from 'lucide-react';
 import { supabase, isMockMode } from '../lib/supabaseClient';
+import { login, signUp } from '../lib/authService';
 
 const getRegionDetails = (regionCode) => {
   switch (regionCode) {
@@ -33,12 +34,6 @@ export const Login = ({ onLoginSuccess }) => {
     localStorage.getItem('wandr_pending_join') ||
     localStorage.getItem('wandr_pending_invite')
   );
-
-  const demoUsers = [
-    { name: 'Sarah J.', initials: 'SJ', email: 'sarah@example.com', role: 'Trip Organizer' },
-    { name: 'Mike', initials: 'M', email: 'mike@example.com', role: 'Trip Member' },
-    { name: 'Chloe', initials: 'C', email: 'chloe@example.com', role: 'Trip Member' },
-  ];
 
   const validateForm = () => {
     if (!email || !password) {
@@ -75,50 +70,53 @@ export const Login = ({ onLoginSuccess }) => {
     setLoading(true);
     try {
       const { currencySymbol, currencyCode } = getRegionDetails(region);
+
       if (isMockMode) {
-        // High fidelity Mock Auth Flow
-        const initials = name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 3) : email[0].toUpperCase();
+        // ── Mock Mode: uses authService with real SHA-256 hashing + session tokens ──
+        let result;
+        if (isSignUp) {
+          result = await signUp({ email, password, username: name });
+        } else {
+          result = await login({ email, password });
+        }
+
+        // Store session token in sessionStorage (clears on tab close)
+        // so another user on the same device can't hijack the session
+        sessionStorage.setItem('wandr_session_token', result.sessionToken);
+
         const mockUserSession = {
-          id: email,
+          id: result.user.id,
           email,
-          name: isSignUp ? name : email.split('@')[0],
-          initials,
+          name: result.user.username || email.split('@')[0],
+          initials: (result.user.username || name || email.split('@')[0])
+            .split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 3),
           role: 'Trip Member',
           region,
           currencySymbol,
           currencyCode,
         };
-        
-        // Wait briefly to simulate server response
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
+
         localStorage.setItem('wandr_user', JSON.stringify(mockUserSession));
         onLoginSuccess(mockUserSession);
+
       } else {
-        // Real Supabase Auth Flow
+        // ── Real Supabase Auth ────────────────────────────────────────────────────
         if (isSignUp) {
           const { data, error: signUpErr } = await supabase.auth.signUp({
             email,
             password,
             options: {
-              data: {
-                name: name,
-                region: region,
-                currencySymbol,
-                currencyCode,
-              }
+              data: { name, region, currencySymbol, currencyCode }
             }
           });
           if (signUpErr) throw signUpErr;
-
           if (!data.session) {
             throw new Error('Please check your email to verify your account, or try signing in if you already have an account.');
           }
-          
           const userProfile = {
             id: data.user.id,
             email: data.user.email,
-            name: name,
+            name,
             initials: name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 3),
             role: 'Trip Member',
             region,
@@ -128,12 +126,8 @@ export const Login = ({ onLoginSuccess }) => {
           localStorage.setItem('wandr_user', JSON.stringify(userProfile));
           onLoginSuccess(userProfile);
         } else {
-          const { data, error: signInErr } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
+          const { data, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
           if (signInErr) throw signInErr;
-          
           const fullName = data.user.user_metadata?.name || email.split('@')[0];
           const userRegion = data.user.user_metadata?.region || 'IN';
           const { currencySymbol: userSymbol, currencyCode: userCode } = getRegionDetails(userRegion);
@@ -158,28 +152,20 @@ export const Login = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleQuickDemoLogin = (user, demoRegion) => {
-    setError(null);
-    setLoading(true);
-    
-    const { currencySymbol, currencyCode } = getRegionDetails(demoRegion);
-    const updatedUser = {
-      ...user,
-      region: demoRegion,
-      currencySymbol,
-      currencyCode,
-    };
-
-    // Simulate instantaneous, premium transition
-    setTimeout(() => {
-      localStorage.setItem('wandr_user', JSON.stringify(updatedUser));
-      onLoginSuccess(updatedUser);
-      setLoading(false);
-    }, 400);
-  };
-
   return (
     <div className="min-h-screen bg-[#F9F8F4] flex flex-col items-center justify-center p-4 md:p-6 font-sans">
+
+      {/* ── Demo Mode Banner ── */}
+      {isMockMode && (
+        <div className="w-full max-w-md mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-amber-800 text-xs shadow-sm">
+          <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-500" />
+          <div>
+            <p className="font-extrabold text-amber-800">You're in Demo Mode — data is saved locally on this device only.</p>
+            <p className="text-amber-700 mt-0.5">No Supabase backend is connected. Your trips, expenses, and account exist only in this browser. Nothing is backed up to a cloud server.</p>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-gray-100/50 p-6 md:p-8 space-y-6 hover:shadow-2xl transition-shadow duration-300 relative overflow-hidden">
         {/* Top Decorative Sparkle */}
         <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -302,7 +288,6 @@ export const Login = ({ onLoginSuccess }) => {
                 </div>
               </div>
 
-              {/* Region Selector for Sign Up */}
               <div className="space-y-1 animate-fadeIn">
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Region / Base Currency</label>
                 <div className="relative">
@@ -333,51 +318,12 @@ export const Login = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        {/* Quick Demo Section */}
-        <div className="space-y-3.5">
-          <div className="relative flex items-center justify-between py-2">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-250/60"></div>
-            </div>
-            <span className="relative px-3.5 bg-white text-xs font-semibold text-gray-450 uppercase tracking-wider">
-              Quick-Demo Login
-            </span>
-            
-            {/* Quick Demo Region Selector */}
-            <select
-              value={region}
-              onChange={e => setRegion(e.target.value)}
-              className="relative px-2 py-1 bg-white border border-gray-200 rounded-lg text-[10px] font-extrabold text-primary focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent cursor-pointer"
-            >
-              <option value="IN">🇮🇳 INR (₹)</option>
-              <option value="US">🇺🇸 USD ($)</option>
-              <option value="EU">🇪🇺 EUR (€)</option>
-              <option value="UK">🇬🇧 GBP (£)</option>
-              <option value="JP">🇯🇵 JPY (¥)</option>
-            </select>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            {demoUsers.map((user) => (
-              <button
-                key={user.email}
-                type="button"
-                onClick={() => handleQuickDemoLogin(user, region)}
-                className="flex flex-col items-center p-3 rounded-xl border border-gray-100 hover:border-accent/40 bg-slate-50/50 hover:bg-accent/5 transition-all duration-200 shadow-sm hover:shadow"
-              >
-                <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center font-bold text-primary text-xs mb-1.5 shadow-sm">
-                  {user.initials}
-                </div>
-                <span className="font-bold text-[10px] text-gray-700 truncate max-w-full text-center">
-                  {user.name}
-                </span>
-                <span className="text-[8px] text-gray-400 font-medium truncate max-w-full text-center mt-0.5">
-                  {user.role.split(' ')[1]}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Note about demo mode — no quick-login without password in demo mode */}
+        {isMockMode && (
+          <p className="text-[10px] text-gray-400 text-center px-2">
+            🔒 In demo mode, your password is hashed in the browser with SHA-256. It's never sent anywhere.
+          </p>
+        )}
       </div>
     </div>
   );
