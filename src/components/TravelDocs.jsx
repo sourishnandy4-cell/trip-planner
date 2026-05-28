@@ -333,6 +333,332 @@ const EMERGENCY_CONTACTS = {
       { icon: '☠️', label: 'Poison Control',        number: '1-800-268-9017'},
     ],
   },
+  NZ: {
+    label: '🇳🇿 New Zealand',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '111'           },
+      { icon: '🚔', label: 'Police (non-emergency)',number: '105'           },
+      { icon: '🏥', label: 'Healthline',            number: '0800 611 116'  },
+    ],
+  },
+  LK: {
+    label: '🇱🇰 Sri Lanka',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '119'           },
+      { icon: '🚑', label: 'Ambulance (Suwa Seriya)',number: '1990'         },
+      { icon: '🔥', label: 'Fire',                  number: '111'           },
+      { icon: '✈️', label: 'Tourist Hotline',       number: '1912'          },
+    ],
+  },
+  MV: {
+    label: '🇲🇻 Maldives',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '119'           },
+      { icon: '🚑', label: 'Ambulance',             number: '102'           },
+      { icon: '🔥', label: 'Fire & Rescue',         number: '118'           },
+      { icon: '🆘', label: 'Coast Guard',           number: '191'           },
+    ],
+  },
+  TW: {
+    label: '🇹🇼 Taiwan',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '110'           },
+      { icon: '🚑', label: 'Ambulance & Fire',      number: '119'           },
+      { icon: '✈️', label: 'Tourist Hotline (EN)',  number: '0800-011-765'  },
+    ],
+  },
+  KH: {
+    label: '🇰🇭 Cambodia',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '117'           },
+      { icon: '🚑', label: 'Ambulance',             number: '119'           },
+      { icon: '🔥', label: 'Fire',                  number: '118'           },
+      { icon: '✈️', label: 'Tourist Police',        number: '012-942-484'   },
+    ],
+  },
+  MM: {
+    label: '🇲🇲 Myanmar',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '199'           },
+      { icon: '🚑', label: 'Ambulance',             number: '192'           },
+      { icon: '🔥', label: 'Fire',                  number: '191'           },
+    ],
+  },
+  BT: {
+    label: '🇧🇹 Bhutan',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '113'           },
+      { icon: '🚑', label: 'Ambulance',             number: '112'           },
+      { icon: '🔥', label: 'Fire',                  number: '110'           },
+    ],
+  },
+  IL: {
+    label: '🇮🇱 Israel',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '100'           },
+      { icon: '🚑', label: 'MDA (Ambulance)',       number: '101'           },
+      { icon: '🔥', label: 'Fire',                  number: '102'           },
+      { icon: '🆘', label: 'All Emergencies',       number: '112'           },
+    ],
+  },
+  JO: {
+    label: '🇯🇴 Jordan',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '911'           },
+      { icon: '🚔', label: 'Police',                number: '191'           },
+      { icon: '🚑', label: 'Ambulance',             number: '911'           },
+      { icon: '✈️', label: 'Tourist Police',        number: '800-650-0'     },
+    ],
+  },
+  SA: {
+    label: '🇸🇦 Saudi Arabia',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '999'           },
+      { icon: '🚑', label: 'Ambulance (SRCA)',      number: '911'           },
+      { icon: '🔥', label: 'Fire (Civil Defense)',  number: '998'           },
+      { icon: '✈️', label: 'Tourism',               number: '920-002-814'   },
+    ],
+  },
+  QA: {
+    label: '🇶🇦 Qatar',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '999'           },
+      { icon: '🚔', label: 'Police',                number: '999'           },
+      { icon: '🚑', label: 'Ambulance (HMCAS)',     number: '999'           },
+    ],
+  },
+  OM: {
+    label: '🇴🇲 Oman',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '9999'          },
+      { icon: '🚔', label: 'Royal Oman Police',     number: '9999'          },
+      { icon: '🚑', label: 'Ambulance',             number: '9999'          },
+    ],
+  },
+  KE: {
+    label: '🇰🇪 Kenya',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '999 / 112'     },
+      { icon: '🚑', label: 'Ambulance (AMREF)',     number: '0700-395-395'  },
+      { icon: '🔥', label: 'Fire',                  number: '999'           },
+      { icon: '✈️', label: 'Tourist Helpline',      number: '020-604-767'   },
+    ],
+  },
+  TZ: {
+    label: '🇹🇿 Tanzania',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '112 / 999'     },
+      { icon: '🚑', label: 'Ambulance',             number: '114'           },
+      { icon: '🔥', label: 'Fire',                  number: '115'           },
+    ],
+  },
+  ET: {
+    label: '🇪🇹 Ethiopia',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '991'           },
+      { icon: '🚑', label: 'Ambulance',             number: '907'           },
+      { icon: '🔥', label: 'Fire',                  number: '939'           },
+    ],
+  },
+  RW: {
+    label: '🇷🇼 Rwanda',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '112'           },
+      { icon: '🚔', label: 'Police',                number: '113'           },
+      { icon: '🚑', label: 'Ambulance',             number: '912'           },
+    ],
+  },
+  CO: {
+    label: '🇨🇴 Colombia',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '123'           },
+      { icon: '🚔', label: 'Police (Nacional)',     number: '112'           },
+      { icon: '🚑', label: 'Ambulance (Cruz Roja)', number: '125'           },
+      { icon: '🔥', label: 'Fire',                  number: '119'           },
+      { icon: '✈️', label: 'Tourist Police',        number: '018000-910-112'},
+    ],
+  },
+  CR: {
+    label: '🇨🇷 Costa Rica',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '911'           },
+      { icon: '🚔', label: 'Police (OIJ)',          number: '800-800-0645'  },
+      { icon: '🚑', label: 'Cruz Roja (Ambulance)', number: '128'           },
+      { icon: '🔥', label: 'Fire (Bomberos)',       number: '118'           },
+    ],
+  },
+  CU: {
+    label: '🇨🇺 Cuba',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '106'           },
+      { icon: '🚑', label: 'Ambulance',             number: '104'           },
+      { icon: '🔥', label: 'Fire',                  number: '105'           },
+    ],
+  },
+  DO: {
+    label: '🇩🇴 Dominican Republic',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '911'           },
+      { icon: '✈️', label: 'Tourist Police (POLITUR)',number: '809-221-3700'},
+    ],
+  },
+  JM: {
+    label: '🇯🇲 Jamaica',
+    lines: [
+      { icon: '🚔', label: 'Police (JCF)',          number: '119'           },
+      { icon: '🚑', label: 'Ambulance',             number: '110'           },
+      { icon: '🔥', label: 'Fire',                  number: '110'           },
+    ],
+  },
+  IS: {
+    label: '🇮🇸 Iceland',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '112'           },
+      { icon: '🚔', label: 'Police',                number: '444-1000'      },
+      { icon: '🏔️', label: 'Search & Rescue (ICE-SAR)',number: '570-5900'  },
+    ],
+  },
+  IE: {
+    label: '🇮🇪 Ireland',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '999 / 112'     },
+      { icon: '🚔', label: 'Garda (Police)',        number: '999'           },
+      { icon: '🏥', label: 'Samaritans (crisis)',   number: '116 123'       },
+    ],
+  },
+  RU: {
+    label: '🇷🇺 Russia',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '102'           },
+      { icon: '🚑', label: 'Ambulance',             number: '103'           },
+      { icon: '🔥', label: 'Fire',                  number: '101'           },
+      { icon: '🆘', label: 'All Emergencies',       number: '112'           },
+    ],
+  },
+  GE: {
+    label: '🇬🇪 Georgia',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '112'           },
+      { icon: '🚔', label: 'Police',                number: '112'           },
+      { icon: '🚑', label: 'Ambulance',             number: '112'           },
+    ],
+  },
+  AT: {
+    label: '🇦🇹 Austria',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '133'           },
+      { icon: '🚑', label: 'Ambulance (Rettung)',   number: '144'           },
+      { icon: '🔥', label: 'Fire (Feuerwehr)',      number: '122'           },
+      { icon: '🆘', label: 'All Emergencies (EU)',  number: '112'           },
+      { icon: '🏔️', label: 'Mountain Rescue',      number: '140'           },
+    ],
+  },
+  BE: {
+    label: '🇧🇪 Belgium',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '101'           },
+      { icon: '🚑', label: 'Ambulance & Fire',      number: '100'           },
+      { icon: '🆘', label: 'All Emergencies (EU)',  number: '112'           },
+    ],
+  },
+  SE: {
+    label: '🇸🇪 Sweden',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies (SOS)', number: '112'           },
+      { icon: '🚔', label: 'Police (non-emergency)',number: '114 14'        },
+      { icon: '🏥', label: 'Healthcare Advice',    number: '1177'          },
+    ],
+  },
+  NO: {
+    label: '🇳🇴 Norway',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '112'           },
+      { icon: '🚑', label: 'Ambulance',             number: '113'           },
+      { icon: '🔥', label: 'Fire',                  number: '110'           },
+    ],
+  },
+  DK: {
+    label: '🇩🇰 Denmark',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '112'           },
+      { icon: '🚔', label: 'Police (non-emergency)',number: '114'           },
+    ],
+  },
+  FI: {
+    label: '🇫🇮 Finland',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '112'           },
+      { icon: '🚔', label: 'Police (non-emergency)',number: '0295 419 800'  },
+    ],
+  },
+  PL: {
+    label: '🇵🇱 Poland',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '997'           },
+      { icon: '🚑', label: 'Ambulance',             number: '999'           },
+      { icon: '🔥', label: 'Fire',                  number: '998'           },
+      { icon: '🆘', label: 'All Emergencies (EU)',  number: '112'           },
+    ],
+  },
+  CZ: {
+    label: '🇨🇿 Czech Republic',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '158'           },
+      { icon: '🚑', label: 'Ambulance',             number: '155'           },
+      { icon: '🔥', label: 'Fire',                  number: '150'           },
+      { icon: '🆘', label: 'All Emergencies (EU)',  number: '112'           },
+    ],
+  },
+  HU: {
+    label: '🇭🇺 Hungary',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '107'           },
+      { icon: '🚑', label: 'Ambulance',             number: '104'           },
+      { icon: '🔥', label: 'Fire',                  number: '105'           },
+      { icon: '🆘', label: 'All Emergencies (EU)',  number: '112'           },
+    ],
+  },
+  RO: {
+    label: '🇷🇴 Romania',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '112'           },
+      { icon: '🚑', label: 'Ambulance (SMURD)',     number: '112'           },
+      { icon: '🔥', label: 'Fire',                  number: '112'           },
+    ],
+  },
+  EC: {
+    label: '🇪🇨 Ecuador',
+    lines: [
+      { icon: '🆘', label: 'All Emergencies',       number: '911'           },
+      { icon: '🚔', label: 'Police (Nacional)',     number: '101'           },
+      { icon: '✈️', label: 'Tourist (iSITUR)',      number: '1800-476-7678' },
+    ],
+  },
+  BO: {
+    label: '🇧🇴 Bolivia',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '110'           },
+      { icon: '🚑', label: 'Ambulance (Cruz Roja)', number: '118'           },
+      { icon: '🔥', label: 'Fire (Bomberos)',       number: '119'           },
+    ],
+  },
+  PK: {
+    label: '🇵🇰 Pakistan',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '15'            },
+      { icon: '🚑', label: 'Ambulance (Rescue)',    number: '1122'          },
+      { icon: '🔥', label: 'Fire',                  number: '16'            },
+      { icon: '🆘', label: 'Emergency (Rescue)',    number: '1122'          },
+    ],
+  },
+  BD: {
+    label: '🇧🇩 Bangladesh',
+    lines: [
+      { icon: '🚔', label: 'Police',                number: '999'           },
+      { icon: '🚑', label: 'Ambulance',             number: '199'           },
+      { icon: '🔥', label: 'Fire',                  number: '199'           },
+    ],
+  },
 };
 
 // ── Destination → region code mapper ─────────────────────────────────────────
@@ -405,8 +731,84 @@ const DESTINATION_MAP = [
   { keys: ['egypt','cairo','luxor','aswan','hurghada','sharm el sheikh','alexandria','giza'], code: 'EG' },
   // Morocco
   { keys: ['morocco','marrakech','casablanca','fez','rabat','agadir','tangier','sahara'], code: 'MA' },
-  // Europe generic fallback (Austria, Belgium, Scandinavia, Balkans etc.)
-  { keys: ['europe','schengen','austria','vienna','belgium','brussels','sweden','stockholm','norway','oslo','denmark','copenhagen','finland','helsinki','poland','warsaw','czech','prague','hungary','budapest','romania','bucharest','slovakia','slovenia','estonia','latvia','lithuania','luxembourg','malta','cyprus'], code: 'EU' },
+  // New Zealand
+  { keys: ['new zealand','auckland','queenstown','wellington','christchurch','rotorua','milford sound','fiordland','bay of islands'], code: 'NZ' },
+  // Sri Lanka
+  { keys: ['sri lanka','colombo','kandy','galle','sigiriya','ella','nuwara eliya','negombo','trincomalee'], code: 'LK' },
+  // Maldives
+  { keys: ['maldives','malé','male','atoll','baa atoll','ari atoll'], code: 'MV' },
+  // Taiwan
+  { keys: ['taiwan','taipei','kaohsiung','tainan','taichung','hualien','taitung','jiufen'], code: 'TW' },
+  // Cambodia
+  { keys: ['cambodia','siem reap','angkor wat','phnom penh','sihanoukville','battambang'], code: 'KH' },
+  // Myanmar
+  { keys: ['myanmar','burma','yangon','bagan','mandalay','inle lake','naypyidaw'], code: 'MM' },
+  // Bhutan
+  { keys: ['bhutan','thimphu','paro','punakha','tiger\'s nest','bumthang'], code: 'BT' },
+  // Israel
+  { keys: ['israel','tel aviv','jerusalem','haifa','eilat','dead sea','negev','galilee','nazareth'], code: 'IL' },
+  // Jordan
+  { keys: ['jordan','amman','petra','wadi rum','aqaba','jerash','dead sea jordan'], code: 'JO' },
+  // Saudi Arabia
+  { keys: ['saudi arabia','riyadh','jeddah','mecca','medina','neom','al-ula','diriyah','abha'], code: 'SA' },
+  // Qatar
+  { keys: ['qatar','doha'], code: 'QA' },
+  // Oman
+  { keys: ['oman','muscat','salalah','nizwa','wahiba sands','sur'], code: 'OM' },
+  // Kenya
+  { keys: ['kenya','nairobi','masai mara','mombasa','amboseli','diani','lamu','samburu'], code: 'KE' },
+  // Tanzania
+  { keys: ['tanzania','serengeti','zanzibar','arusha','kilimanjaro','dar es salaam','ngorongoro'], code: 'TZ' },
+  // Ethiopia
+  { keys: ['ethiopia','addis ababa','lalibela','axum','aksum','gondar','danakil'], code: 'ET' },
+  // Rwanda
+  { keys: ['rwanda','kigali','volcanoes national park','lake kivu'], code: 'RW' },
+  // Colombia
+  { keys: ['colombia','bogota','medellin','cartagena','cali','santa marta','coffee region'], code: 'CO' },
+  // Costa Rica
+  { keys: ['costa rica','san jose','manuel antonio','arenal','monteverde','guanacaste','tamarindo'], code: 'CR' },
+  // Cuba
+  { keys: ['cuba','havana','trinidad cuba','varadero','cienfuegos','santiago de cuba'], code: 'CU' },
+  // Dominican Republic
+  { keys: ['dominican republic','punta cana','santo domingo','puerto plata','la romana'], code: 'DO' },
+  // Jamaica
+  { keys: ['jamaica','kingston','montego bay','negril','ocho rios'], code: 'JM' },
+  // Iceland
+  { keys: ['iceland','reykjavik','akureyri','golden circle','blue lagoon','northern lights iceland'], code: 'IS' },
+  // Ireland
+  { keys: ['ireland','dublin','cork','galway','limerick','killarney','ring of kerry','cliffs of moher'], code: 'IE' },
+  // Russia
+  { keys: ['russia','moscow','st petersburg','saint petersburg','vladivostok','kazan','sochi','lake baikal'], code: 'RU' },
+  // Georgia (country)
+  { keys: ['georgia country','tbilisi','batumi','kutaisi','kazbegi','mestia','sighnaghi'], code: 'GE' },
+  // Austria
+  { keys: ['austria','vienna','salzburg','innsbruck','hallstatt','graz','linz'], code: 'AT' },
+  // Belgium
+  { keys: ['belgium','brussels','bruges','ghent','antwerp','liege'], code: 'BE' },
+  // Sweden
+  { keys: ['sweden','stockholm','gothenburg','malmo','uppsala','kiruna','lapland sweden'], code: 'SE' },
+  // Norway
+  { keys: ['norway','oslo','bergen','tromsø','tromso','lofoten','fjords norway','stavanger','flam'], code: 'NO' },
+  // Denmark
+  { keys: ['denmark','copenhagen','aarhus','odense','bornholm','roskilde'], code: 'DK' },
+  // Finland
+  { keys: ['finland','helsinki','rovaniemi','lapland finland','tampere','turku','oulu'], code: 'FI' },
+  // Poland
+  { keys: ['poland','warsaw','krakow','gdansk','wroclaw','poznan','auschwitz','zakopane'], code: 'PL' },
+  // Czech Republic
+  { keys: ['czech','prague','brno','cesky krumlov','karlovy vary','olomouc'], code: 'CZ' },
+  // Hungary
+  { keys: ['hungary','budapest','eger','pecs','debrecen','lake balaton'], code: 'HU' },
+  // Romania
+  { keys: ['romania','bucharest','transylvania','brasov','cluj','sibiu','dracula castle','bran'], code: 'RO' },
+  // Ecuador
+  { keys: ['ecuador','quito','galapagos','cuenca','banos','amazon ecuador'], code: 'EC' },
+  // Bolivia
+  { keys: ['bolivia','la paz','salar de uyuni','uyuni','cochabamba','sucre','titicaca bolivia'], code: 'BO' },
+  // Pakistan
+  { keys: ['pakistan','lahore','islamabad','karachi','peshawar','hunza','k2','gilgit'], code: 'PK' },
+  // Bangladesh
+  { keys: ['bangladesh','dhaka','chittagong','cox\'s bazar','sylhet','sundarbans'], code: 'BD' },
 ];
 
 // Returns region code from a destination string, falling back to user's region

@@ -340,6 +340,8 @@ Rules:
 - Budget update: if the user says "set budget to X", "change budget to X", or "my budget is now X", set "updateBudget" to the numeric value (e.g. "updateBudget": 700000). Otherwise keep it null.
 - ONLY include the <WANDR_ACTION> block when the user explicitly wants to add something to their dashboard. For general Q&A, omit it.
 - Wrap the JSON in <WANDR_ACTION> and </WANDR_ACTION> tags exactly. Output ONLY ONE <WANDR_ACTION> block per response.
+- CRITICAL: Never put the JSON in a code block (no backticks). Never add any text after the closing </WANDR_ACTION> tag. The block must appear at the very end of your response.
+- CRITICAL: Make sure the <WANDR_ACTION> block is always properly closed with </WANDR_ACTION>. Never output a partial/unclosed block.
 
 RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specific actionable advice. Always be positive.`;
   };
@@ -360,13 +362,20 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
 
       // ── Parse WANDR_ACTION blocks and execute dashboard updates ─────────
       const actionMatch = reply.match(/<WANDR_ACTION>([\s\S]*?)<\/WANDR_ACTION>/);
-      const cleanReply  = reply.replace(/<WANDR_ACTION>[\s\S]*?<\/WANDR_ACTION>/g, '').trim();
+      // Strip the action block (and any partial/unclosed block) from the displayed reply
+      let cleanReply = reply
+        .replace(/<WANDR_ACTION>[\s\S]*?<\/WANDR_ACTION>/g, '')   // complete block
+        .replace(/<WANDR_ACTION>[\s\S]*/g, '')                     // unclosed/partial block
+        .replace(/```json[\s\S]*?```/g, '')                        // stray JSON code fences
+        .trim();
       let actionSummary = '';
 
       if (actionMatch) {
         try {
           setLoadingLabel('Updating dashboard…');
-          const jsonStr = actionMatch[1].trim();
+          const jsonStr = actionMatch[1]
+            .replace(/```json|```/g, '')  // strip any accidental code fences inside
+            .trim();
           const actions = JSON.parse(jsonStr);
           let addedItems = 0, addedExpenses = 0, failedItems = 0;
           const parts = [];
