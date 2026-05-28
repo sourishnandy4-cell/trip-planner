@@ -391,10 +391,35 @@ function App() {
     setTripMeta(null);
   };
 
-  const handleUpdateUser = (updatedUser) => {
+  const handleUpdateUser = async (updatedUser) => {
     localStorage.setItem('wandr_user', JSON.stringify(updatedUser));
     setCurrentUser(updatedUser);
     setShowProfileModal(false);
+
+    try {
+      if (isMockMode) {
+        const raw = localStorage.getItem('wandr_mock_users');
+        if (raw) {
+          const users = JSON.parse(raw);
+          if (users[updatedUser.email]) {
+            users[updatedUser.email].username = updatedUser.name;
+            users[updatedUser.email].avatar = updatedUser.avatar || null;
+            users[updatedUser.email].avatarColorClass = updatedUser.avatarColorClass || null;
+            localStorage.setItem('wandr_mock_users', JSON.stringify(users));
+          }
+        }
+      } else {
+        await supabase.auth.updateUser({
+          data: { 
+            name: updatedUser.name,
+            avatar: updatedUser.avatar || null,
+            avatarColorClass: updatedUser.avatarColorClass || null,
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error persisting profile data', err);
+    }
   };
 
   const handleLoadDemo = () => {

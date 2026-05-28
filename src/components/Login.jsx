@@ -57,6 +57,9 @@ export const Login = ({ onLoginSuccess }) => {
           result = await login({ email, password });
         }
         sessionStorage.setItem('wandr_session_token', result.sessionToken);
+        let storedMockUser = null;
+        try { storedMockUser = JSON.parse(localStorage.getItem('wandr_mock_users') || '{}')[email]; } catch(e){}
+        
         const mockUserSession = {
           id: result.user.id,
           email,
@@ -65,6 +68,8 @@ export const Login = ({ onLoginSuccess }) => {
             .split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 3),
           role: 'Trip Member',
           region, currencySymbol, currencyCode,
+          avatar: storedMockUser?.avatar || null,
+          avatarColorClass: storedMockUser?.avatarColorClass || null,
         };
         localStorage.setItem('wandr_user', JSON.stringify(mockUserSession));
         onLoginSuccess(mockUserSession);
@@ -93,6 +98,8 @@ export const Login = ({ onLoginSuccess }) => {
             id: data.user.id, email: data.user.email, name: fullName,
             initials: fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 3),
             role: 'Trip Member', region: userRegion, currencySymbol: uSym, currencyCode: uCode,
+            avatar: data.user.user_metadata?.avatar || null,
+            avatarColorClass: data.user.user_metadata?.avatarColorClass || null,
           };
           localStorage.setItem('wandr_user', JSON.stringify(userProfile));
           onLoginSuccess(userProfile);
