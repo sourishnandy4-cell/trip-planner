@@ -2,6 +2,8 @@ import { supabase, isMockMode } from './supabaseClient';
 import {
   mockFetchItinerary,
   mockAddItineraryItem,
+  mockDeleteItineraryItem,
+  mockClearItinerary,
 } from './mockDatabase';
 
 /**
@@ -52,6 +54,38 @@ export const addItineraryItem = async (tripId, item) => {
 
   if (error) {
     console.error('[addItineraryItem]', error.message);
+    return { data: null, error };
+  }
+  return { data, error: null };
+};
+
+export const deleteItineraryItem = async (itemId) => {
+  if (isMockMode) return mockDeleteItineraryItem(itemId);
+
+  const { data, error } = await supabase
+    .from('itinerary_items')
+    .delete()
+    .eq('id', itemId)
+    .select();
+
+  if (error) {
+    console.error('[deleteItineraryItem]', error.message);
+    return { data: null, error };
+  }
+  return { data, error: null };
+};
+
+export const clearItinerary = async (tripId) => {
+  if (isMockMode) return mockClearItinerary(tripId);
+
+  const { data, error } = await supabase
+    .from('itinerary_items')
+    .delete()
+    .eq('trip_id', tripId)
+    .select();
+
+  if (error) {
+    console.error('[clearItinerary]', error.message);
     return { data: null, error };
   }
   return { data, error: null };

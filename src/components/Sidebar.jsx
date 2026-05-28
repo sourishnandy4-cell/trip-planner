@@ -10,7 +10,7 @@ export const Sidebar = ({ activeTab = 'dashboard', onTabChange, user, onLogout, 
     { id: 'weather', label: 'Weather', icon: Cloud },
     { id: 'members', label: 'Members', icon: Users },
     { id: 'docs', label: 'Docs', icon: FileText },
-    { id: 'ai', label: 'Finance AI', icon: Bot },
+    { id: 'ai', label: 'AI Assistant', icon: Bot },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

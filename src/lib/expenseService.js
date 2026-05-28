@@ -6,6 +6,8 @@ import {
   mockAddExpense,
   mockSettleBalances,
   mockUpdateTripBudget,
+  mockDeleteExpense,
+  mockClearExpenses,
 } from './mockDatabase';
 
 /** Fetch the last 10 expenses for a trip. */
@@ -209,6 +211,39 @@ export const settleBalances = async (tripId) => {
   if (updateErr) {
     console.error('[settleBalances update]', updateErr.message);
     return { data: null, error: updateErr };
+  }
+  return { data, error: null };
+};
+
+export const deleteExpense = async (expenseId) => {
+  if (isMockMode) return mockDeleteExpense(expenseId);
+
+  // Supabase takes care of cascade deleting splits via foreign key constraints
+  const { data, error } = await supabase
+    .from('expenses')
+    .delete()
+    .eq('id', expenseId)
+    .select();
+
+  if (error) {
+    console.error('[deleteExpense]', error.message);
+    return { data: null, error };
+  }
+  return { data, error: null };
+};
+
+export const clearExpenses = async (tripId) => {
+  if (isMockMode) return mockClearExpenses(tripId);
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .delete()
+    .eq('trip_id', tripId)
+    .select();
+
+  if (error) {
+    console.error('[clearExpenses]', error.message);
+    return { data: null, error };
   }
   return { data, error: null };
 };

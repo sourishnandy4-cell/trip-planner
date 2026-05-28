@@ -167,6 +167,27 @@ export const mockAddItineraryItem = async (tripId, item) => {
   return { data: newItem, error: null };
 };
 
+export const mockDeleteItineraryItem = async (itemId) => {
+  const index = MOCK_ITINERARY_ITEMS.findIndex(item => item.id === itemId);
+  if (index !== -1) {
+    MOCK_ITINERARY_ITEMS.splice(index, 1);
+    saveMockData();
+    return { data: { success: true }, error: null };
+  }
+  return { data: null, error: { message: 'Item not found' } };
+};
+
+export const mockClearItinerary = async (tripId) => {
+  let i = MOCK_ITINERARY_ITEMS.length;
+  while (i--) {
+    if (MOCK_ITINERARY_ITEMS[i].trip_id === tripId) {
+      MOCK_ITINERARY_ITEMS.splice(i, 1);
+    }
+  }
+  saveMockData();
+  return { data: { success: true }, error: null };
+};
+
 export const mockAddExpense = async (tripId, expense, splits) => {
   const newExpenseId = 'exp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
   const newExpense = {
@@ -192,6 +213,46 @@ export const mockAddExpense = async (tripId, expense, splits) => {
 
   saveMockData();
   return { data: newExpense, error: null };
+};
+
+export const mockDeleteExpense = async (expenseId) => {
+  const index = MOCK_EXPENSES.findIndex(e => e.id === expenseId);
+  if (index !== -1) {
+    MOCK_EXPENSES.splice(index, 1);
+    
+    // Also delete splits
+    let i = MOCK_SPLITS.length;
+    while (i--) {
+      if (MOCK_SPLITS[i].expense_id === expenseId) {
+        MOCK_SPLITS.splice(i, 1);
+      }
+    }
+    
+    saveMockData();
+    return { data: { success: true }, error: null };
+  }
+  return { data: null, error: { message: 'Expense not found' } };
+};
+
+export const mockClearExpenses = async (tripId) => {
+  const expensesToRemove = new Set();
+  let i = MOCK_EXPENSES.length;
+  while (i--) {
+    if (MOCK_EXPENSES[i].trip_id === tripId) {
+      expensesToRemove.add(MOCK_EXPENSES[i].id);
+      MOCK_EXPENSES.splice(i, 1);
+    }
+  }
+  
+  let j = MOCK_SPLITS.length;
+  while (j--) {
+    if (expensesToRemove.has(MOCK_SPLITS[j].expense_id)) {
+      MOCK_SPLITS.splice(j, 1);
+    }
+  }
+  
+  saveMockData();
+  return { data: { success: true }, error: null };
 };
 
 export const mockSettleBalances = async (tripId) => {

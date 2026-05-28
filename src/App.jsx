@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sidebar, Header, ItineraryTimeline, BudgetPieChart, RecentExpenses, BalanceSheet, Login, ProfileModal, TravelDocs, FinanceAI, TripMembers, MapView, WeatherView, LoadingScreen, CursorPlane } from './components';
+import { Sidebar, Header, ItineraryTimeline, BudgetPieChart, RecentExpenses, BalanceSheet, Login, ProfileModal, TravelDocs, AIAssistant, TripMembers, MapView, WeatherView, LoadingScreen, CursorPlane } from './components';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { supabase, isMockMode } from './lib/supabaseClient';
 import {
@@ -955,7 +955,7 @@ function App() {
           )}
 
           {activeTab === 'ai' && (
-            <FinanceAI 
+            <AIAssistant 
               tripId={tripMeta.id}
               tripName={tripMeta.name}
               tripDestination={tripMeta.destination}
@@ -1112,7 +1112,7 @@ function App() {
                           );
                         })}
                       </div>
-                      <p className="text-[9.5px] text-gray-400">Helps Wandr Finance AI tailor budget allocations and travel cost advice to your personal travel style.</p>
+                      <p className="text-[9.5px] text-gray-400">Helps Wandr AI Assistant tailor budget allocations and travel cost advice to your personal travel style.</p>
                     </div>
                   </div>
                 </div>

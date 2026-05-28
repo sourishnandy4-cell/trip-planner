@@ -10,7 +10,7 @@ export { BalanceSheet } from './BalanceSheet';
 export { Login } from './Login';
 export { ProfileModal } from './ProfileModal';
 export { TravelDocs } from './TravelDocs';
-export { FinanceAI } from './FinanceAI';
+export { AIAssistant } from './AIAssistant';
 export { TripMembers } from './TripMembers';
 export { ThemeToggle } from './ThemeToggle';
 export { MapView } from './MapView';

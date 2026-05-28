@@ -4,8 +4,8 @@ import {
   Cloud, Map, DollarSign, MessageCircle, Globe,
   TrendingUp, Compass, Lightbulb, Settings,
 } from 'lucide-react';
-import { fetchItinerary, addItineraryItem } from '../lib/itineraryService';
-import { fetchRecentExpenses, fetchTripMembers, addExpense, updateTripBudget } from '../lib/expenseService';
+import { fetchItinerary, addItineraryItem, deleteItineraryItem, clearItinerary } from '../lib/itineraryService';
+import { fetchRecentExpenses, fetchTripMembers, addExpense, updateTripBudget, deleteExpense, clearExpenses, settleBalances } from '../lib/expenseService';
 import { calculateNetBalances } from '../lib/balanceCalculator';
 import { loadAISettings, AI_PROVIDERS } from './AISettings';
 
@@ -218,8 +218,8 @@ const callProviderAPI = async (provider, apiKey, model, systemPrompt, history, u
   return reply;
 };
 
-// ── Main FinanceAI component ───────────────────────────────────────────────────
-export const FinanceAI = ({ tripId, tripName, tripDestination, startDate, endDate, totalBudget, currencySymbol = '₹', memberName = 'Traveller', onGoToSettings, onDashboardUpdate, onTripMetaUpdate }) => {
+// ── Main AIAssistant component ───────────────────────────────────────────────────
+export const AIAssistant = ({ tripId, tripName, tripDestination, startDate, endDate, totalBudget, currencySymbol = '₹', memberName = 'Traveller', onGoToSettings, onDashboardUpdate, onTripMetaUpdate }) => {
   const [aiSettings, setAiSettings] = useState(() => loadAISettings());
   const messagesEndRef = useRef(null);
   const CHAT_KEY = `wandr_ai_chat_${tripId}`;
@@ -259,7 +259,7 @@ export const FinanceAI = ({ tripId, tripName, tripDestination, startDate, endDat
       if (prev.length > 0) return prev; // restore saved chat — don't reset
       return [{
         id: 'welcome', sender: 'ai',
-        text: `Hi! I'm your **Wandr AI Advisor** 🤖\n\nI have full access to your trip **"${tripName}"** and can answer any travel question:\n* 💰 Budget, expenses & balances\n* 🗓️ Full itinerary & locations\n* 🌤️ Live weather for ${tripDestination || 'your destination'}\n* 🗺️ Mapped stops & coordinates\n* 📋 **I can also build your full itinerary and add it to the dashboard!**\n* 🌍 Visa, currency, culture, food, safety & more\n\n_Ask me anything — powered by **${provider.name}**._`,
+        text: `Hi! I'm your **Wandr AI Assistant** 🤖\n\nI have full access to your trip **"${tripName}"** and can answer any travel question:\n* 💰 Budget, expenses & balances\n* 🗓️ Full itinerary & locations\n* 🌤️ Live weather for ${tripDestination || 'your destination'}\n* 🗺️ Mapped stops & coordinates\n* 📋 **I can also build your full itinerary and add it to the dashboard!**\n* 🌍 Visa, currency, culture, food, safety & more\n\n_Ask me anything — powered by **${provider.name}**._`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }];
     });
@@ -282,9 +282,9 @@ export const FinanceAI = ({ tripId, tripName, tripDestination, startDate, endDat
 
     const members   = (mRes.value?.data || []).map(m => typeof m === 'string' ? m : m.name).filter(Boolean);
     const itinerary = (iRes.value?.data || []).map(it =>
-      `- ${new Date(it.start_time).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})}: ${it.title} @ "${it.location||'no location'}" [${it.category_icon}]${it.notes?` — ${it.notes}`:''}`
+      `- [ID: ${it.id}] ${new Date(it.start_time).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})}: ${it.title} @ "${it.location||'no location'}" [${it.category_icon}]${it.notes?` — ${it.notes}`:''}`
     ).join('\n');
-    const expenses  = (eRes.value?.data || []).map(e => `- ${e.description}: ${currencySymbol}${e.amount} paid by ${e.paid_by} [${e.category}]`).join('\n');
+    const expenses  = (eRes.value?.data || []).map(e => `- [ID: ${e.id}] ${e.description}: ${currencySymbol}${e.amount} paid by ${e.paid_by} [${e.category}]`).join('\n');
     const balances  = (bRes.value?.data || []).map(b => `- ${b.from} owes ${b.to} ${currencySymbol}${b.amount}`).join('\n');
     const totalSpent = (eRes.value?.data || []).reduce((s, e) => s + Number(e.amount || 0), 0);
     const budgetRemaining = Number(totalBudget) - totalSpent;
@@ -299,7 +299,7 @@ export const FinanceAI = ({ tripId, tripName, tripDestination, startDate, endDat
     }
     setLoadingLabel('Generating response…');
 
-    return `You are Wandr AI — a friendly travel assistant in the Wandr group travel app.
+    return `You are Wandr AI Assistant — a friendly travel assistant in the Wandr group travel app.
 You have TWO roles:
 1. TRIP ADVISOR: Answer questions about this trip using the data below.
 2. GENERAL TRAVEL EXPERT: Answer ANY travel question — visa, currency, culture, food, safety, transport, packing, attractions, etc.
@@ -317,7 +317,7 @@ ${weatherContext?`WEATHER (${tripDestination}):\n${weatherContext}`:''}
 ${mapContext?`MAP:\n${mapContext}`:''}
 
 ━━━ DASHBOARD UPDATE CAPABILITY ━━━
-When the user asks you to plan a trip, add activities, hotel stays, dining, sightseeing, expenses, or any other dashboard data — you MUST include a <WANDR_ACTION> JSON block at the VERY END of your response (after all text). This will automatically save items to their dashboard.
+When the user asks you to plan a trip, add activities, log expenses, delete items, clear the itinerary, or settle debts — you MUST include a <WANDR_ACTION> JSON block at the VERY END of your response. This will instantly update their dashboard.
 
 Required JSON format inside the block:
 {
@@ -327,18 +327,26 @@ Required JSON format inside the block:
   "expenses": [
     { "description": "What was spent on", "amount": 5000, "category": "Accommodation", "paid_by": "${memberName}" }
   ],
-  "updateBudget": null
+  "updateBudget": null,
+  "deleteItinerary": [],
+  "clearItinerary": false,
+  "deleteExpenses": [],
+  "clearExpenses": false,
+  "settleBalances": false
 }
 
 Rules:
 - category_icon must be one of: transport | food | activity | music | accommodation
 - expense category must be one of: Accommodation | Food & Drinks | Transport | Activities | Shopping | Miscellaneous
 - Use the trip's actual start_date (${startDate||'use trip start date'}) and end_date (${endDate||'use trip end date'}) for scheduling. Spread activities across the full trip duration.
-- For a FULL trip plan (e.g. "plan 7 days in Japan"), generate ALL days with multiple stops each day. Include hotel check-in as accommodation, dining stops as food, sightseeing as activity, flights/trains as transport.
-- ALWAYS include BOTH itinerary AND expenses arrays when planning a trip. Never split them into separate blocks.
+- For a FULL trip plan (e.g. "plan 7 days in Japan"), generate ALL days with multiple stops each day.
+- To add items, use the \`itinerary\` and \`expenses\` arrays. Always include BOTH arrays even if empty.
+- To delete specific items, add their string IDs (from the data above) to \`deleteItinerary\` or \`deleteExpenses\` arrays.
+- To wipe everything, set \`clearItinerary\` or \`clearExpenses\` to true.
+- To mark all debts as paid, set \`settleBalances\` to true.
 - If adding expenses, set paid_by to "${memberName}".
-- Budget update: if the user says "set budget to X", "change budget to X", or "my budget is now X", set "updateBudget" to the numeric value (e.g. "updateBudget": 700000). Otherwise keep it null.
-- ONLY include the <WANDR_ACTION> block when the user explicitly wants to add something to their dashboard. For general Q&A, omit it.
+- Budget update: if the user says "set budget to X", set "updateBudget" to the numeric value (e.g. 700000).
+- ONLY include the <WANDR_ACTION> block when the user explicitly wants to modify their dashboard.
 - Wrap the JSON in <WANDR_ACTION> and </WANDR_ACTION> tags exactly. Output ONLY ONE <WANDR_ACTION> block per response.
 - CRITICAL: Never put the JSON in a code block (no backticks). Never add any text after the closing </WANDR_ACTION> tag. The block must appear at the very end of your response.
 - CRITICAL: Make sure the <WANDR_ACTION> block is always properly closed with </WANDR_ACTION>. Never output a partial/unclosed block.
@@ -418,6 +426,35 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
             }
           }
 
+          if (actions.clearItinerary) {
+            const { error: err } = await clearItinerary(tripId);
+            if (!err) parts.push(`**cleared entire itinerary**`);
+          } else if (Array.isArray(actions.deleteItinerary) && actions.deleteItinerary.length > 0) {
+            let delCount = 0;
+            for (const id of actions.deleteItinerary) {
+              const { error: err } = await deleteItineraryItem(id);
+              if (!err) delCount++;
+            }
+            if (delCount > 0) parts.push(`**deleted ${delCount} itinerary item(s)**`);
+          }
+
+          if (actions.clearExpenses) {
+            const { error: err } = await clearExpenses(tripId);
+            if (!err) parts.push(`**cleared all expenses**`);
+          } else if (Array.isArray(actions.deleteExpenses) && actions.deleteExpenses.length > 0) {
+            let delCount = 0;
+            for (const id of actions.deleteExpenses) {
+              const { error: err } = await deleteExpense(id);
+              if (!err) delCount++;
+            }
+            if (delCount > 0) parts.push(`**deleted ${delCount} expense(s)**`);
+          }
+
+          if (actions.settleBalances) {
+            const { error: err } = await settleBalances(tripId);
+            if (!err) parts.push(`**settled all outstanding debts**`);
+          }
+
           if (addedItems > 0) parts.push(`**${addedItems} itinerary ${addedItems === 1 ? 'activity' : 'activities'}**`);
           if (addedExpenses > 0) parts.push(`**${addedExpenses} ${addedExpenses === 1 ? 'expense' : 'expenses'}**`);
           if (parts.length > 0) {
@@ -476,7 +513,7 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-primary text-white rounded-2xl shadow-sm"><Bot className="w-5 h-5" /></div>
           <div>
-            <h2 className="font-extrabold text-lg text-primary tracking-tight">AI Travel Advisor</h2>
+            <h2 className="font-extrabold text-lg text-primary tracking-tight">AI Assistant</h2>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
