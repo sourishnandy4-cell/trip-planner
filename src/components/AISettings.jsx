@@ -16,11 +16,10 @@ export const AI_PROVIDERS = {
     getKeyUrl: 'https://aistudio.google.com/app/apikey',
     getKeyLabel: 'aistudio.google.com/app/apikey',
     models: [
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash ✦ (Best)' },
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash ✦ (Recommended)' },
       { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
     ],
-    defaultModel: 'gemini-2.5-flash',
+    defaultModel: 'gemini-2.0-flash',
   },
   groq: {
     id: 'groq',

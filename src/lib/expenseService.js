@@ -251,3 +251,52 @@ export const clearExpenses = async (tripId) => {
   }
   return { data, error: null };
 };
+
+export const updateTripDestination = async (tripId, newDestination) => {
+  if (isMockMode()) {
+    const trip = MOCK_TRIPS.find(t => t.id === tripId);
+    if (trip) {
+      trip.destination = newDestination;
+      saveMockData();
+    }
+    return { data: trip, error: null };
+  }
+
+  const { data, error } = await supabase
+    .from('trips')
+    .update({ destination: newDestination })
+    .eq('id', tripId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[updateTripDestination]', error.message);
+    return { data: null, error };
+  }
+  return { data, error: null };
+};
+
+export const updateTripDates = async (tripId, startDate, endDate) => {
+  if (isMockMode()) {
+    const trip = MOCK_TRIPS.find(t => t.id === tripId);
+    if (trip) {
+      trip.start_date = startDate;
+      trip.end_date = endDate;
+      saveMockData();
+    }
+    return { data: trip, error: null };
+  }
+
+  const { data, error } = await supabase
+    .from('trips')
+    .update({ start_date: startDate, end_date: endDate })
+    .eq('id', tripId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[updateTripDates]', error.message);
+    return { data: null, error };
+  }
+  return { data, error: null };
+};

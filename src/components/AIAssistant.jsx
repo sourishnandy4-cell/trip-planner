@@ -5,7 +5,7 @@ import {
   TrendingUp, Compass, Lightbulb, Settings,
 } from 'lucide-react';
 import { fetchItinerary, addItineraryItem, deleteItineraryItem, clearItinerary } from '../lib/itineraryService';
-import { fetchRecentExpenses, fetchTripMembers, addExpense, updateTripBudget, deleteExpense, clearExpenses, settleBalances } from '../lib/expenseService';
+import { fetchRecentExpenses, fetchTripMembers, addExpense, updateTripBudget, deleteExpense, clearExpenses, settleBalances, updateTripDestination, updateTripDates } from '../lib/expenseService';
 import { calculateNetBalances } from '../lib/balanceCalculator';
 import { loadAISettings, AI_PROVIDERS } from './AISettings';
 
@@ -328,6 +328,9 @@ Required JSON format inside the block:
     { "description": "What was spent on", "amount": 5000, "category": "Accommodation", "paid_by": "${memberName}" }
   ],
   "updateBudget": null,
+  "updateDestination": null,
+  "updateStartDate": null,
+  "updateEndDate": null,
   "deleteItinerary": [],
   "clearItinerary": false,
   "deleteExpenses": [],
@@ -340,6 +343,7 @@ Rules:
 - expense category must be one of: Accommodation | Food & Drinks | Activities | Transport (NEVER use 'Shopping' or 'Miscellaneous' as they violate database constraints).
 - Use the trip's actual start_date (${startDate||'use trip start date'}) and end_date (${endDate||'use trip end date'}) for scheduling. Spread activities across the full trip duration.
 - For a FULL trip plan, generate at most 10-12 key activities (spread chronologically across the trip dates) and at most 5-6 core expenses. This avoids hitting token limits or truncating the output, while maintaining high-fidelity quality.
+- Destination & Dates: if the user asks you to plan for a new destination or date range, set "updateDestination" to the place name (e.g. "Paris, France"), and set "updateStartDate" and "updateEndDate" to the new YYYY-MM-DD dates respectively. Otherwise set them to null.
 - To add items, use the \`itinerary\` and \`expenses\` arrays. Always include BOTH arrays even if empty.
 - To delete specific items, add their string IDs (from the data above) to \`deleteItinerary\` or \`deleteExpenses\` arrays.
 - To wipe everything, set \`clearItinerary\` or \`clearExpenses\` to true.
@@ -396,6 +400,27 @@ RULES: Use ${currencySymbol} for amounts. Be friendly. Use markdown. Give specif
             if (!budgetErr) {
               parts.push(`**budget updated to ${currencySymbol}${newBudget.toLocaleString()}**`);
               onTripMetaUpdate?.({ total_budget: newBudget });
+              onDashboardUpdate?.();
+            }
+          }
+
+          // ── Destination update ──────────────────────────────────────────
+          if (actions.updateDestination && actions.updateDestination.trim() !== '') {
+            const newDest = actions.updateDestination.trim();
+            const { error: destErr } = await updateTripDestination(tripId, newDest);
+            if (!destErr) {
+              parts.push(`**destination updated to ${newDest}**`);
+              onTripMetaUpdate?.({ destination: newDest });
+              onDashboardUpdate?.();
+            }
+          }
+
+          // ── Date updates ───────────────────────────────────────────────
+          if (actions.updateStartDate && actions.updateEndDate) {
+            const { error: dateErr } = await updateTripDates(tripId, actions.updateStartDate, actions.updateEndDate);
+            if (!dateErr) {
+              parts.push(`**dates updated to ${actions.updateStartDate} to ${actions.updateEndDate}**`);
+              onTripMetaUpdate?.({ start_date: actions.updateStartDate, end_date: actions.updateEndDate });
               onDashboardUpdate?.();
             }
           }
