@@ -16,16 +16,16 @@ export const Sidebar = ({ activeTab = 'dashboard', onTabChange, user, onLogout, 
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Mobile Overlay — must sit above everything including the header */}
       {isOpen && (
         <div 
           className="fixed inset-0 md:hidden"
-          style={{ zIndex: 9999, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+          style={{ zIndex: 99998, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
           onClick={onClose}
         />
       )}
       
-      {/* Sidebar */}
+      {/* Sidebar — one level above the overlay */}
       <aside 
         className={`
           wandr-sidebar fixed left-0 top-0 h-screen w-64
@@ -34,7 +34,7 @@ export const Sidebar = ({ activeTab = 'dashboard', onTabChange, user, onLogout, 
           ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           flex flex-col
         `}
-        style={{ zIndex: 10000 }}
+        style={{ zIndex: 99999 }}
       >
         {/* Logo + Close Button */}
         <div style={{ padding: '24px 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

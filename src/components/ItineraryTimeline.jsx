@@ -181,7 +181,7 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
   }, {}) : {};
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 space-y-6">
+    <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 space-y-6 overflow-x-hidden w-full">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold text-primary">Itinerary Timeline</h2>
         <button
@@ -286,15 +286,17 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
         <div className="space-y-8">
           {Object.entries(groupedByDate).map(([date, dayItems]) => (
             <div key={date} className="relative">
-              <div className="flex items-start gap-3 md:gap-4">
-                <div className="w-16 md:w-24 flex-shrink-0">
-                  <div className="text-xs md:text-sm font-bold text-primary break-words">{date}</div>
+              <div className="flex items-start gap-2 md:gap-4">
+                {/* Date label — fixed narrow width on mobile */}
+                <div className="w-14 md:w-24 flex-shrink-0 pt-0.5">
+                  <div className="text-[11px] md:text-sm font-bold text-primary leading-tight">{date}</div>
                 </div>
 
-                <div className="flex-1 relative min-w-0">
+                {/* Timeline column — takes all remaining space, never overflows */}
+                <div className="flex-1 relative min-w-0 overflow-hidden pl-5 md:pl-8">
                   <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-200"></div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-3 md:space-y-4">
                     {dayItems.map((item) => {
                       const Icon = iconMap[item.category_icon] || MapPin;
                       const colorClass = categoryColors[item.category_icon] || 'bg-teal-100 text-teal-600';
@@ -306,33 +308,41 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
                       });
 
                       return (
-                        <div key={item.id} className="relative pl-6 md:pl-8 group">
-                          <div className="absolute left-0 top-2 w-3 h-3 bg-accent rounded-full -translate-x-[5px] ring-4 ring-white"></div>
+                        <div key={item.id} className="relative group">
+                          {/* Timeline dot */}
+                          <div className="absolute -left-5 md:-left-8 top-3 w-2.5 h-2.5 bg-accent rounded-full ring-4 ring-white flex-shrink-0"></div>
 
-                          <div className="bg-white border border-gray-100 rounded-xl p-3 md:p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
-                            <div className="flex items-start gap-2 md:gap-3">
-                              <div className={`p-2 rounded-lg flex-shrink-0 ${colorClass.split(' ')[0]}`}>
-                                <Icon className={`w-5 h-5 ${colorClass.split(' ')[1]}`} />
+                          {/* Card — enforces no overflow */}
+                          <div className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 w-full overflow-hidden">
+                            <div className="flex items-start gap-2 min-w-0">
+                              {/* Icon badge */}
+                              <div className={`p-1.5 md:p-2 rounded-lg flex-shrink-0 ${colorClass.split(' ')[0]}`}>
+                                <Icon className={`w-4 h-4 md:w-5 md:h-5 ${colorClass.split(' ')[1]}`} />
                               </div>
                               
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xs font-medium text-gray-500">{time}</span>
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${colorClass}`}>
+                              {/* Content — must truncate/wrap correctly */}
+                              <div className="flex-1 min-w-0 overflow-hidden">
+                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                  <span className="text-[10px] md:text-xs font-medium text-gray-500 flex-shrink-0">{time}</span>
+                                  <span className={`text-[9px] md:text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${colorClass}`}>
                                     {item.category_icon || 'activity'}
                                   </span>
                                 </div>
-                                <h3 className="font-bold text-primary mb-1 break-words leading-tight">{item.title}</h3>
-                                {item.location && <p className="text-xs md:text-sm text-gray-600 break-words leading-snug">{item.location}</p>}
+                                <h3 className="font-bold text-primary text-sm leading-snug mb-1 break-words">{item.title}</h3>
+                                {item.location && (
+                                  <p className="text-xs text-gray-500 break-words leading-snug">{item.location}</p>
+                                )}
                                 {item.notes && (
-                                  <p className="text-[10px] md:text-xs text-gray-500 mt-2 italic break-words leading-snug">{item.notes}</p>
+                                  <p className="text-[10px] md:text-xs text-gray-400 mt-1.5 italic break-words leading-snug">{item.notes}</p>
                                 )}
                               </div>
 
+                              {/* Delete button — only show on hover (touch: always visible on mobile) */}
                               <button
                                 onClick={() => handleDelete(item.id)}
                                 disabled={deletingId === item.id}
-                                className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
+                                className="opacity-0 group-hover:opacity-100 md:opacity-0 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0 touch-auto"
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
                                 title="Delete activity"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
