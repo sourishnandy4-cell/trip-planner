@@ -8,9 +8,18 @@ export default {
   theme: {
     extend: {
       colors: {
+        // ── Theme-aware tokens (read from CSS custom properties) ─────────────
+        // These automatically switch color when [data-theme] changes on <html>.
+        // 'primary' maps to --color-primary (the interactive/button brand color).
+        // 'accent'  maps to --accent (the highlight/link color).
+        'primary':        'var(--color-primary)',
+        'accent':         'var(--accent)',
+        'accent-warm':    'var(--accent-warm)',
+        'accent-teal':    'var(--accent-teal)',
+        'accent-coral':   'var(--accent-coral)',
+
+        // ── Legacy static tokens kept for backward compat ───────────────────
         'warm-bg':           '#F9F8F4',
-        'primary':           '#2E3F5C',
-        'accent':            '#E8A87C',
         'activity-green':    '#6DB8A8',
         'transport-purple':  '#C4B5D0',
         // Dark mode colors (used by neon theme)

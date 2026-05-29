@@ -27,6 +27,9 @@
   --text-on-sidebar: #ffffff;
   --text-on-sidebar-muted: rgba(255, 255, 255, 0.65);
 
+  /* color-primary = the interactive/button brand colour for this theme */
+  --color-primary: #d4736e;
+
   --accent: #d4736e;
   --accent-warm: #c4956a;
   --accent-teal: #87a96b;
@@ -96,6 +99,9 @@
   --text-on-sidebar: #ffffff;
   --text-on-sidebar-muted: rgba(255, 255, 255, 0.6);
 
+  /* color-primary = the interactive/button brand colour for this theme */
+  --color-primary: #4A90D9;
+
   --accent: #4A90D9;
   --accent-warm: #F5A623;
   --accent-teal: #2EC4B6;
@@ -159,6 +165,9 @@
   --text-muted: #8c7260;
   --text-on-sidebar: #fdf6e3;
   --text-on-sidebar-muted: rgba(253, 246, 227, 0.6);
+
+  /* color-primary = the interactive/button brand colour for this theme */
+  --color-primary: #e8692d;
 
   --accent: #e8692d;
   --accent-warm: #d4a017;
@@ -224,6 +233,9 @@
   --text-on-sidebar: #ffffff;
   --text-on-sidebar-muted: rgba(255, 255, 255, 0.65);
 
+  /* color-primary = the interactive/button brand colour for this theme */
+  --color-primary: #0077b6;
+
   --accent: #0077b6;
   --accent-warm: #f4d35e;
   --accent-teal: #2d6a4f;
@@ -288,6 +300,9 @@
   --text-on-sidebar: #f8fafc;
   --text-on-sidebar-muted: #64748b;
 
+  /* color-primary = the interactive/button brand colour for this theme */
+  --color-primary: #6366f1;
+
   --accent: #6366f1;
   --accent-warm: #f59e0b;
   --accent-teal: #10b981;
@@ -351,6 +366,9 @@
   --text-muted: #b57a8a;
   --text-on-sidebar: #ffffff;
   --text-on-sidebar-muted: rgba(255, 255, 255, 0.65);
+
+  /* color-primary = the interactive/button brand colour for this theme */
+  --color-primary: #ff5c7a;
 
   --accent: #ff5c7a;
   --accent-warm: #d4a373;
