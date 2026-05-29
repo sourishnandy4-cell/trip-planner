@@ -776,7 +776,7 @@ function App() {
             </div>
             <h2 className="text-3xl font-extrabold text-primary">Initialize Your Journey</h2>
             <p className="text-sm text-gray-500 max-w-md mx-auto">
-              Start a completely fresh trip and manage your custom timeline, or load the pre-populated Barcelona demo to explore Wandr.
+              Start a completely fresh trip and manage your custom timeline.
             </p>
             {onboardingError && (
               <div className="max-w-md mx-auto bg-red-50 border border-red-100 rounded-xl p-3 text-red-600 text-xs text-center">
@@ -940,19 +940,6 @@ function App() {
             </div>
 
             <div className="space-y-3 pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-accent" />
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quick Sandbox</span>
-              </div>
-              
-              <button
-                type="button"
-                onClick={handleLoadDemo}
-                className="w-full bg-[#E8A87C]/10 hover:bg-[#E8A87C]/20 text-[#d8976b] font-bold rounded-xl py-2.5 text-xs flex items-center justify-center gap-1.5 transition-all duration-200"
-              >
-                Load Barcelona Demo Trip
-              </button>
-              
               <button
                 type="button"
                 onClick={handleLogout}
