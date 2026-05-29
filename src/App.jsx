@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, Header, ItineraryTimeline, BudgetPieChart, RecentExpenses, BalanceSheet, Login, ProfileModal, TravelDocs, AIAssistant, TripMembers, MapView, WeatherView, LoadingScreen, CursorPlane } from './components';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
-import { supabase, isMockMode as _isMockMode, setRuntimeMockMode, USE_MOCK_MODE } from './lib/supabaseClient';
+import { supabase, isMockMode as _isMockMode, setRuntimeMockMode, USE_MOCK_MODE, getFriendlyErrorMessage, isNetworkError } from './lib/supabaseClient';
 
 // Helper: returns true if we should use local mock storage
 const isMockMode = () => _isMockMode();
@@ -16,6 +16,7 @@ import {
 } from './lib/mockDatabase';
 import { Loader2, Sparkles, MapPin, Calendar, Compass, ArrowRight, BookOpen, Trash2, Settings, Palette, Globe, Sliders, Check, ChevronDown } from 'lucide-react';
 import { AISettingsPanel } from './components/AISettings';
+import { useCloudSync } from './lib/useCloudSync';
 
 function App() {
   const { activeTheme, setTheme, THEME_LIST } = useTheme();
@@ -40,6 +41,24 @@ function App() {
   });
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [dbConnected, setDbConnected] = useState(true);
+
+  const checkDbConnection = async () => {
+    try {
+      const url = supabase?.supabaseUrl || 'https://rggsvpjiwhdicgaukcaa.supabase.co';
+      const res = await fetch(`${url}/auth/v1/health`);
+      const connected = res.ok || res.status === 401;
+      setDbConnected(connected);
+      return connected;
+    } catch {
+      setDbConnected(false);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    checkDbConnection();
+  }, []);
 
   // ── Stash any invite/join params from URL into localStorage immediately on
   //    first load, before the user has logged in. Processed after login below.
@@ -90,8 +109,8 @@ function App() {
             .eq('user_id', currentUser.id);
           
           if (memberErr) {
-            const isNet = memberErr.message?.includes('fetch') || memberErr.message?.includes('Failed to fetch') || memberErr.message?.includes('Network');
-            if (isNet) {
+            if (isNetworkError(memberErr)) {
+              setDbConnected(false);
               setRuntimeMockMode();
               const myTrips = MOCK_TRIPS.filter(trip => {
                 const membersEntry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === trip.id);
@@ -118,8 +137,8 @@ function App() {
 
         const { data, error } = await query;
         if (error) {
-          const isNet = error.message?.includes('fetch') || error.message?.includes('Failed to fetch') || error.message?.includes('Network');
-          if (isNet) {
+          if (isNetworkError(error)) {
+            setDbConnected(false);
             setRuntimeMockMode();
             const myTrips = MOCK_TRIPS.filter(trip => {
               const membersEntry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === trip.id);
@@ -143,8 +162,8 @@ function App() {
         }
     } catch (err) {
       console.error('Failed to load existing trips:', err);
-      const isNet = err instanceof TypeError || err.message?.includes('fetch') || err.message?.includes('Network');
-      if (isNet) {
+      if (isNetworkError(err)) {
+        setDbConnected(false);
         setRuntimeMockMode();
       }
       // On network failure, surface any locally saved trips so the user isn't left with nothing
@@ -327,8 +346,8 @@ function App() {
 
         if (fetchErr) {
           console.error('Fetch trip error:', fetchErr);
-          const isNet = fetchErr.message?.includes('fetch') || fetchErr.message?.includes('Failed to fetch') || fetchErr.message?.includes('Network');
-          if (isNet) {
+          if (isNetworkError(fetchErr)) {
+            setDbConnected(false);
             setRuntimeMockMode();
             const localTrip = MOCK_TRIPS.find(t => t.id === activeTripId);
             if (localTrip) {
@@ -432,306 +451,17 @@ function App() {
     setTripMeta(null);
   };
 
-  const handleSyncTripToCloud = async () => {
-    if (!currentUser) return;
-    if (!tripMeta) return;
+  const { handleSyncTripToCloud, autoMigrateLocalTrips } = useCloudSync({
+    currentUser,
+    tripMeta,
+    activeTripId,
+    setActiveTripId,
+    setLoading,
+    setDbConnected,
+    handleRefresh,
+    fetchExistingTrips
+  });
 
-    const confirmSync = window.confirm(
-      `Do you want to sync "${tripMeta.name}" to the cloud? This will save the trip, all itinerary items, and expenses in the live cloud database so it is immediately available on all your devices (including your phone).`
-    );
-    if (!confirmSync) return;
-
-    setLoading(true);
-    try {
-      // 1. Double check session and auth with Supabase
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error("You are not properly authenticated with Supabase. Please sign out and sign in again.");
-      }
-      if (sessionData.session.user.id !== currentUser.id) {
-        throw new Error("Your session is invalid or out of sync. Please sign out and sign in again.");
-      }
-
-      // 2. Insert trip metadata into Supabase
-      const { data: syncedTrip, error: tripErr } = await supabase
-        .from('trips')
-        .insert([{
-          name: tripMeta.name,
-          destination: tripMeta.destination,
-          start_date: tripMeta.start_date,
-          end_date: tripMeta.end_date,
-          total_budget: Number(tripMeta.total_budget),
-          created_by: currentUser.id
-        }])
-        .select()
-        .single();
-
-      if (tripErr) throw tripErr;
-
-      // 3. Insert user as owner in trip_members
-      try {
-        await supabase.from('trip_members').insert([{
-          trip_id: syncedTrip.id,
-          user_id: currentUser.id,
-          role: 'owner'
-        }]);
-      } catch (mErr) {
-        console.warn('Membership association handled by database triggers or RLS constraints.', mErr);
-      }
-
-      // 4. Migrate Itinerary Items
-      const localItinerary = MOCK_ITINERARY_ITEMS.filter(item => item.trip_id === activeTripId);
-      if (localItinerary.length > 0) {
-        const itineraryToInsert = localItinerary.map(item => ({
-          trip_id: syncedTrip.id,
-          title: item.title,
-          location: item.location || '',
-          start_time: item.start_time,
-          notes: item.notes || '',
-          category_icon: item.category_icon || 'activity',
-          created_by: currentUser.id
-        }));
-
-        const { error: itinErr } = await supabase
-          .from('itinerary_items')
-          .insert(itineraryToInsert);
-
-        if (itinErr) {
-          console.error("Failed to migrate some itinerary items:", itinErr.message);
-        }
-      }
-
-      // 5. Migrate Expenses and Splits
-      const localExpenses = MOCK_EXPENSES.filter(exp => exp.trip_id === activeTripId);
-      if (localExpenses.length > 0) {
-        for (const exp of localExpenses) {
-          const { data: newExpense, error: expErr } = await supabase
-            .from('expenses')
-            .insert([{
-              trip_id: syncedTrip.id,
-              description: exp.description,
-              amount: Number(exp.amount),
-              category: exp.category,
-              paid_by: currentUser.id
-            }])
-            .select()
-            .single();
-
-          if (expErr) {
-            console.error("Failed to migrate expense:", exp.description, expErr.message);
-            continue;
-          }
-
-          // Insert even split for owner
-          const { error: splitErr } = await supabase
-            .from('expense_splits')
-            .insert([{
-              expense_id: newExpense.id,
-              user_id: currentUser.id,
-              owed_amount: Number(exp.amount),
-              is_settled: true,
-              settled_at: new Date().toISOString()
-            }]);
-
-          if (splitErr) {
-            console.error("Failed to insert split for migrated expense:", splitErr.message);
-          }
-        }
-      }
-
-      // 6. Clean up old local/mock trip data from localStorage arrays
-      const tripIdx = MOCK_TRIPS.findIndex(t => t.id === activeTripId);
-      if (tripIdx !== -1) {
-        MOCK_TRIPS.splice(tripIdx, 1);
-      }
-      
-      const mIdx = MOCK_TRIP_MEMBERS.findIndex(m => m.trip_id === activeTripId);
-      if (mIdx !== -1) {
-        MOCK_TRIP_MEMBERS.splice(mIdx, 1);
-      }
-
-      let i = MOCK_ITINERARY_ITEMS.length;
-      while (i--) {
-        if (MOCK_ITINERARY_ITEMS[i].trip_id === activeTripId) {
-          MOCK_ITINERARY_ITEMS.splice(i, 1);
-        }
-      }
-
-      let eIdx = MOCK_EXPENSES.length;
-      const removedExpenseIds = new Set();
-      while (eIdx--) {
-        if (MOCK_EXPENSES[eIdx].trip_id === activeTripId) {
-          removedExpenseIds.add(MOCK_EXPENSES[eIdx].id);
-          MOCK_EXPENSES.splice(eIdx, 1);
-        }
-      }
-
-      let sIdx = MOCK_SPLITS.length;
-      while (sIdx--) {
-        if (removedExpenseIds.has(MOCK_SPLITS[sIdx].expense_id)) {
-          MOCK_SPLITS.splice(sIdx, 1);
-        }
-      }
-
-      saveMockData();
-
-      // 7. Update active trip ID to the new Supabase UUID
-      localStorage.setItem('wandr_active_trip_id', syncedTrip.id);
-      setActiveTripId(syncedTrip.id);
-      
-      alert('Trip synced successfully! It is now saved in the live cloud and will sync automatically to all your devices.');
-      handleRefresh();
-    } catch (err) {
-      console.error('Failed to sync trip:', err);
-      alert('Failed to sync trip to cloud: ' + (err.message || 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const autoMigrateLocalTrips = async () => {
-    if (!currentUser) return;
-    
-    const localTripsToSync = MOCK_TRIPS.filter(t => {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t.id);
-      const isDemo = t.id === 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-      return !isUUID && !isDemo;
-    });
-
-    if (localTripsToSync.length === 0) return;
-
-    console.info(`[Wandr] Auto-migrating ${localTripsToSync.length} local trips to Supabase cloud...`);
-
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session || sessionData.session.user.id !== currentUser.id) {
-        return;
-      }
-
-      for (const trip of localTripsToSync) {
-        const { data: syncedTrip, error: tripErr } = await supabase
-          .from('trips')
-          .insert([{
-            name: trip.name,
-            destination: trip.destination,
-            start_date: trip.start_date,
-            end_date: trip.end_date,
-            total_budget: Number(trip.total_budget),
-            created_by: currentUser.id
-          }])
-          .select()
-          .single();
-
-        if (tripErr) {
-          console.error("Auto-migration: Failed to sync trip meta:", trip.name, tripErr.message);
-          continue;
-        }
-
-        try {
-          await supabase.from('trip_members').insert([{
-            trip_id: syncedTrip.id,
-            user_id: currentUser.id,
-            role: 'owner'
-          }]);
-        } catch (mErr) {
-          console.warn('Membership association handled by database triggers or RLS constraints.', mErr);
-        }
-
-        const localItinerary = MOCK_ITINERARY_ITEMS.filter(item => item.trip_id === trip.id);
-        if (localItinerary.length > 0) {
-          const itineraryToInsert = localItinerary.map(item => ({
-            trip_id: syncedTrip.id,
-            title: item.title,
-            location: item.location || '',
-            start_time: item.start_time,
-            notes: item.notes || '',
-            category_icon: item.category_icon || 'activity',
-            created_by: currentUser.id
-          }));
-
-          const { error: itinErr } = await supabase
-            .from('itinerary_items')
-            .insert(itineraryToInsert);
-
-          if (itinErr) console.error("Auto-migration: Failed to migrate itinerary:", itinErr.message);
-        }
-
-        const localExpenses = MOCK_EXPENSES.filter(exp => exp.trip_id === trip.id);
-        if (localExpenses.length > 0) {
-          for (const exp of localExpenses) {
-            const { data: newExpense, error: expErr } = await supabase
-              .from('expenses')
-              .insert([{
-                trip_id: syncedTrip.id,
-                description: exp.description,
-                amount: Number(exp.amount),
-                category: exp.category,
-                paid_by: currentUser.id
-              }])
-              .select()
-              .single();
-
-            if (expErr) {
-              console.error("Auto-migration: Failed to migrate expense:", exp.description, expErr.message);
-              continue;
-            }
-
-            const { error: splitErr } = await supabase
-              .from('expense_splits')
-              .insert([{
-                expense_id: newExpense.id,
-                user_id: currentUser.id,
-                owed_amount: Number(exp.amount),
-                is_settled: true,
-                settled_at: new Date().toISOString()
-              }]);
-
-            if (splitErr) console.error("Auto-migration: Failed to insert split:", splitErr.message);
-          }
-        }
-
-        const tripIdx = MOCK_TRIPS.findIndex(t => t.id === trip.id);
-        if (tripIdx !== -1) MOCK_TRIPS.splice(tripIdx, 1);
-        
-        const mIdx = MOCK_TRIP_MEMBERS.findIndex(m => m.trip_id === trip.id);
-        if (mIdx !== -1) MOCK_TRIP_MEMBERS.splice(mIdx, 1);
-
-        let idx = MOCK_ITINERARY_ITEMS.length;
-        while (idx--) {
-          if (MOCK_ITINERARY_ITEMS[idx].trip_id === trip.id) {
-            MOCK_ITINERARY_ITEMS.splice(idx, 1);
-          }
-        }
-
-        let eIdx = MOCK_EXPENSES.length;
-        const removedExpenseIds = new Set();
-        while (eIdx--) {
-          if (MOCK_EXPENSES[eIdx].trip_id === trip.id) {
-            removedExpenseIds.add(MOCK_EXPENSES[eIdx].id);
-            MOCK_EXPENSES.splice(eIdx, 1);
-          }
-        }
-
-        let sIdx = MOCK_SPLITS.length;
-        while (sIdx--) {
-          if (removedExpenseIds.has(MOCK_SPLITS[sIdx].expense_id)) {
-            MOCK_SPLITS.splice(sIdx, 1);
-          }
-        }
-
-        if (activeTripId === trip.id) {
-          localStorage.setItem('wandr_active_trip_id', syncedTrip.id);
-          setActiveTripId(syncedTrip.id);
-        }
-      }
-
-      saveMockData();
-      console.info("[Wandr] Auto-migration complete. Reloading trips list...");
-      await fetchExistingTrips();
-    } catch (err) {
-      console.error("[Wandr] Auto-migration error:", err);
-    }
-  };
 
   const handleUpdateUser = async (updatedUser) => {
     localStorage.setItem('wandr_user', JSON.stringify(updatedUser));
@@ -885,14 +615,8 @@ function App() {
       setNewTripMembers(currentUser?.name || '');
     } catch (err) {
       // Network-level failures (Supabase paused / offline) — fall back to local mock storage
-      const isNetworkError =
-        err instanceof TypeError ||
-        err.message === 'Failed to fetch' ||
-        err.message?.includes('Failed to fetch') ||
-        err.message?.includes('NetworkError') ||
-        err.message?.includes('fetch');
-
-      if (isNetworkError) {
+      if (isNetworkError(err)) {
+        setDbConnected(false);
         console.warn('[Wandr] Supabase unreachable — saving trip locally instead.', err);
         setRuntimeMockMode();
         try {
@@ -923,6 +647,11 @@ function App() {
           setNewEndDate('');
           setNewBudget('');
           setNewTripMembers(currentUser?.name || '');
+          
+          alert(
+            `Wandr Cloud was unreachable, so "${newTripName}" was saved locally to this device instead.\n\n` +
+            `To sync this trip and access it on other devices (like your phone), please check your connection (or disable your adblocker for this site) and click the "Sync to Cloud" button at the top of your dashboard.`
+          );
           return; // success via fallback — no error shown
         } catch (fallbackErr) {
           setOnboardingError('Could not reach the server and local save also failed. Please refresh and try again.');
@@ -940,6 +669,48 @@ function App() {
       <>
         {showLoadingScreen && <LoadingScreen onFinished={() => setShowLoadingScreen(false)} />}
         <CursorPlane />
+        {!dbConnected && (
+          <div style={{
+            background: 'linear-gradient(90deg, #dc2626, #b91c1c)',
+            color: '#fff',
+            padding: '10px 16px',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+            zIndex: 100,
+            position: 'relative'
+          }}>
+            <svg style={{ width: '16px', height: '16px', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>
+              <strong>Cloud Sync Unreachable:</strong> Disabling your adblocker (e.g. Brave Shields, uBlock Origin) or checking your network connection/firewall is required to sign in and sync.
+            </span>
+            <button 
+              onClick={checkDbConnection}
+              style={{
+                background: 'rgba(255,255,255,0.25)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#fff',
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                fontWeight: 700,
+                marginLeft: '12px',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+            >
+              Retry Connection
+            </button>
+          </div>
+        )}
         <Login onLoginSuccess={setCurrentUser} />
       </>
     );
@@ -948,10 +719,51 @@ function App() {
   // Render onboarding wizard if logged in but no active trip selected
   if (!activeTripId) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 font-sans" style={{ background: 'var(--bg-gradient)' }}>
-
-
-        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-5 gap-6 rounded-3xl shadow-xl p-6 md:p-8 hover:shadow-2xl transition-all duration-300 relative overflow-hidden glass-card" style={{ borderRadius: 'var(--radius-lg)' }}>
+      <div className="min-h-screen flex flex-col font-sans" style={{ background: 'var(--bg-gradient)' }}>
+        {!dbConnected && (
+          <div style={{
+            background: 'linear-gradient(90deg, #dc2626, #b91c1c)',
+            color: '#fff',
+            padding: '10px 16px',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+            zIndex: 100,
+            position: 'relative'
+          }}>
+            <svg style={{ width: '16px', height: '16px', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>
+              <strong>Cloud Sync Unreachable:</strong> Disabling your adblocker (e.g. Brave Shields, uBlock Origin) or checking your network connection/firewall is required to sync.
+            </span>
+            <button 
+              onClick={checkDbConnection}
+              style={{
+                background: 'rgba(255,255,255,0.25)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#fff',
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                fontWeight: 700,
+                marginLeft: '12px',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+            >
+              Retry Connection
+            </button>
+          </div>
+        )}
+        <div className="flex-1 flex items-center justify-center p-4 md:p-6">
+          <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-5 gap-6 rounded-3xl shadow-xl p-6 md:p-8 hover:shadow-2xl transition-all duration-300 relative overflow-hidden glass-card" style={{ borderRadius: 'var(--radius-lg)' }}>
           
           {/* Main Greeting (Header spans full width) */}
           <div className="md:col-span-5 text-center space-y-2 mb-2">
@@ -1148,6 +960,7 @@ function App() {
           </div>
         </div>
       </div>
+    </div>
     );
   }
 
@@ -1225,6 +1038,48 @@ function App() {
 
       {/* Main Content Area */}
       <div className="md:ml-64 min-h-screen relative">
+        {!dbConnected && (
+          <div style={{
+            background: 'linear-gradient(90deg, #dc2626, #b91c1c)',
+            color: '#fff',
+            padding: '10px 16px',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+            zIndex: 100,
+            position: 'relative'
+          }}>
+            <svg style={{ width: '16px', height: '16px', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>
+              <strong>Cloud Sync Unreachable:</strong> Disabling your adblocker (e.g. Brave Shields, uBlock Origin) or checking your network connection/firewall is required to sync trips with other devices.
+            </span>
+            <button 
+              onClick={checkDbConnection}
+              style={{
+                background: 'rgba(255,255,255,0.25)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#fff',
+                padding: '4px 10px',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                fontWeight: 700,
+                marginLeft: '12px',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+            >
+              Retry Connection
+            </button>
+          </div>
+        )}
 
         {/* ── Destination background image via Wikipedia API (CSP-safe) ── */}
         {destBgUrl && (

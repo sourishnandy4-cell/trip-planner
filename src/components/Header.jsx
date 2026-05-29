@@ -95,150 +95,60 @@ export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTr
   };
 
   return (
-    <header className="wandr-header" style={{ position: 'relative', zIndex: 20, padding: '12px 16px', marginBottom: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', minWidth: 0 }}>
+    <header className="wandr-header relative z-20 px-4 py-3 mb-6">
+      <div className="flex items-center justify-between gap-2 min-w-0">
         {/* Left: Mobile Menu + Trip Info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {/* Mobile Menu Button */}
           <button
             onClick={onMenuClick}
-            className="md:hidden"
-            style={{
-              padding: '8px',
-              borderRadius: '8px',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--text-secondary)',
-              transition: 'all 0.2s ease',
-            }}
+            className="md:hidden p-2 rounded-lg bg-transparent border-none cursor-pointer text-[var(--text-secondary)] transition-all duration-200 hover:bg-gray-100"
             aria-label="Open menu"
           >
             <Menu className="w-6 h-6" />
           </button>
           
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 className="trip-name" style={{
-                fontSize: 'clamp(1.1rem, 2vw, 1.5rem)',
-                fontWeight: 800,
-                letterSpacing: '-0.5px',
-                color: 'var(--text-primary)',
-                margin: 0,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5">
+              <h1 className="trip-name text-[clamp(1.1rem,2vw,1.5rem)] font-extrabold tracking-tight text-[var(--text-primary)] m-0 whitespace-nowrap overflow-hidden text-ellipsis">
                 {tripName}
               </h1>
               {tripId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tripId) && user && onSyncToCloud && (
                 <button
                   onClick={onSyncToCloud}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    background: 'linear-gradient(135deg, var(--accent), var(--accent-teal))',
-                    color: '#fff',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    borderRadius: '20px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-[var(--accent)] to-[var(--accent-teal)] text-white text-xs font-bold rounded-full border-none cursor-pointer shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-md"
                   title="Upload this local trip to the cloud database to sync with your phone"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ width: '14px', height: '14px' }}>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   Sync to Cloud
                 </button>
               )}
             </div>
-            <span style={{
-              display: 'inline-block',
-              marginTop: '4px',
-              padding: '4px 10px',
-              background: 'var(--accent-glow)',
-              color: 'var(--accent)',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              borderRadius: '20px',
-              whiteSpace: 'nowrap',
-            }}>
+            <span className="inline-block mt-1 px-2.5 py-1 bg-[var(--accent-glow)] text-[var(--accent)] text-xs font-semibold rounded-full whitespace-nowrap">
               {dateRange}
             </span>
           </div>
         </div>
 
         {/* Center: Search Bar */}
-        <div className="hidden lg:flex" style={{ flex: 1, maxWidth: '400px' }} ref={searchWrapperRef}>
-          <div style={{ position: 'relative', width: '100%' }}>
-            <Search style={{
-              position: 'absolute',
-              left: '14px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: '18px',
-              height: '18px',
-              color: 'var(--text-muted)',
-              pointerEvents: 'none',
-            }} />
+        <div className="hidden lg:flex flex-1 max-w-[400px]" ref={searchWrapperRef}>
+          <div className="relative w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
               onFocus={() => searchQuery.trim() && setShowResults(true)}
               placeholder="Search activities, expenses..."
-              style={{
-                width: '100%',
-                paddingLeft: '42px',
-                paddingRight: searchQuery ? '36px' : '14px',
-                paddingTop: '10px',
-                paddingBottom: '10px',
-                borderRadius: '50px',
-                border: '1px solid var(--glass-border)',
-                background: 'var(--glass-bg)',
-                color: 'var(--text-primary)',
-                fontSize: '0.85rem',
-                outline: 'none',
-                transition: 'all 0.3s ease',
-                backdropFilter: 'blur(10px)',
-              }}
-              onFocusCapture={(e) => {
-                e.target.style.boxShadow = `0 0 0 3px var(--input-focus-ring)`;
-                e.target.style.borderColor = 'var(--accent)';
-              }}
-              onBlurCapture={(e) => {
-                e.target.style.boxShadow = 'none';
-                e.target.style.borderColor = 'var(--glass-border)';
-              }}
+              className="w-full pl-[42px] py-2.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-primary)] text-sm outline-none transition-all duration-300 backdrop-blur-md focus:border-[var(--accent)] focus:ring-[3px] focus:ring-[var(--input-focus-ring)]"
+              style={{ paddingRight: searchQuery ? '36px' : '14px' }}
             />
             {searchQuery && (
               <button
                 onClick={handleClearSearch}
-                style={{
-                  position: 'absolute',
-                  right: '14px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 bg-transparent border-none text-[var(--text-muted)] cursor-pointer p-0 hover:text-[var(--text-primary)]"
               >
                 <X className="w-4 h-4" />
               </button>

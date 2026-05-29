@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mail, Lock, User, ArrowRight, AlertCircle, Globe, UserCheck, Eye, EyeOff } from 'lucide-react';
-import { supabase, USE_MOCK_MODE } from '../lib/supabaseClient';
+import { supabase, USE_MOCK_MODE, getFriendlyErrorMessage } from '../lib/supabaseClient';
 const isMockMode = () => USE_MOCK_MODE;
 import { login, signUp } from '../lib/authService';
 
@@ -107,7 +107,7 @@ export const Login = ({ onLoginSuccess }) => {
         }
       }
     } catch (err) {
-      setError(err.message || 'Authentication failed. Please check your credentials.');
+      setError(getFriendlyErrorMessage(err, 'Authentication failed. Please check your credentials.'));
     } finally {
       setLoading(false);
     }
@@ -123,21 +123,6 @@ export const Login = ({ onLoginSuccess }) => {
       radial-gradient(ellipse at 30% 80%, rgba(20,80,60,0.8) 0%, transparent 50%),
       linear-gradient(160deg, #0a2a4a 0%, #0e4d3a 30%, #1a3a6b 60%, #0d2535 100%)
     `,
-  };
-
-  const glassCard = {
-    background: 'rgba(255,255,255,0.13)',
-    backdropFilter: 'blur(24px)',
-    WebkitBackdropFilter: 'blur(24px)',
-    border: '1px solid rgba(255,255,255,0.28)',
-    boxShadow: '0 8px 64px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
-  };
-
-  const inputStyle = {
-    background: 'rgba(255,255,255,0.12)',
-    border: '1px solid rgba(255,255,255,0.25)',
-    color: '#fff',
-    backdropFilter: 'blur(8px)',
   };
 
   // Generate animated stars
@@ -264,7 +249,7 @@ export const Login = ({ onLoginSuccess }) => {
       )}
 
       {/* Glass card */}
-      <div className="relative z-10 w-full max-w-sm rounded-3xl p-8 space-y-6" style={glassCard}>
+      <div className="relative z-10 w-full max-w-sm rounded-3xl p-8 space-y-6 bg-white/10 backdrop-blur-xl border border-white/30 shadow-[0_8px_64px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]">
 
         {/* Brand */}
         <div className="text-center space-y-2">
@@ -328,8 +313,8 @@ export const Login = ({ onLoginSuccess }) => {
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                 <input type="text" required value={name} onChange={e=>setName(e.target.value)}
                   placeholder="e.g. Sarah J."
-                  className="w-full text-sm pl-10 pr-4 py-3 rounded-xl outline-none placeholder-white/30 transition-all focus:border-white/50"
-                  style={inputStyle} />
+                  className="w-full text-sm pl-10 pr-4 py-3 rounded-xl outline-none placeholder-white/30 transition-all focus:border-white/50 bg-white/10 border border-white/25 text-white backdrop-blur-md"
+                />
               </div>
             </div>
           )}
@@ -340,8 +325,8 @@ export const Login = ({ onLoginSuccess }) => {
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
               <input type="email" required value={email} onChange={e=>setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full text-sm pl-10 pr-4 py-3 rounded-xl outline-none placeholder-white/30 transition-all focus:border-white/50"
-                style={inputStyle} />
+                className="w-full text-sm pl-10 pr-4 py-3 rounded-xl outline-none placeholder-white/30 transition-all focus:border-white/50 bg-white/10 border border-white/25 text-white backdrop-blur-md"
+              />
             </div>
           </div>
 
@@ -351,8 +336,8 @@ export const Login = ({ onLoginSuccess }) => {
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
               <input type={showPassword?'text':'password'} required value={password} onChange={e=>setPassword(e.target.value)}
                 placeholder="••••••"
-                className="w-full text-sm pl-10 pr-10 py-3 rounded-xl outline-none placeholder-white/30 transition-all focus:border-white/50"
-                style={inputStyle} />
+                className="w-full text-sm pl-10 pr-10 py-3 rounded-xl outline-none placeholder-white/30 transition-all focus:border-white/50 bg-white/10 border border-white/25 text-white backdrop-blur-md"
+              />
               <button type="button" onClick={()=>setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
                 {showPassword ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
@@ -368,8 +353,8 @@ export const Login = ({ onLoginSuccess }) => {
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                   <input type={showConfirm?'text':'password'} required value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)}
                     placeholder="••••••"
-                    className="w-full text-sm pl-10 pr-10 py-3 rounded-xl outline-none placeholder-white/30 transition-all"
-                    style={inputStyle} />
+                    className="w-full text-sm pl-10 pr-10 py-3 rounded-xl outline-none placeholder-white/30 transition-all bg-white/10 border border-white/25 text-white backdrop-blur-md"
+                  />
                   <button type="button" onClick={()=>setShowConfirm(!showConfirm)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
                     {showConfirm ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
@@ -382,8 +367,8 @@ export const Login = ({ onLoginSuccess }) => {
                 <div className="relative">
                   <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 z-10 pointer-events-none" />
                   <select value={region} onChange={e=>setRegion(e.target.value)}
-                    className="w-full text-sm pl-10 pr-4 py-3 rounded-xl outline-none appearance-none transition-all"
-                    style={{...inputStyle, color:'rgba(255,255,255,0.85)'}}>
+                    className="w-full text-sm pl-10 pr-4 py-3 rounded-xl outline-none appearance-none transition-all bg-white/10 border border-white/25 text-white backdrop-blur-md"
+                  >
                     <option value="IN" style={{background:'#1e293b'}}>🇮🇳 India (₹ / INR)</option>
                     <option value="US" style={{background:'#1e293b'}}>🇺🇸 United States ($ / USD)</option>
                     <option value="EU" style={{background:'#1e293b'}}>🇪🇺 Europe (€ / EUR)</option>
