@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, Header, ItineraryTimeline, BudgetPieChart, RecentExpenses, BalanceSheet, Login, ProfileModal, TravelDocs, AIAssistant, TripMembers, MapView, WeatherView, LoadingScreen, CursorPlane } from './components';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
-import { supabase, isMockMode as _isMockMode, setRuntimeMockMode } from './lib/supabaseClient';
+import { supabase, isMockMode as _isMockMode, setRuntimeMockMode, USE_MOCK_MODE } from './lib/supabaseClient';
 
 // Helper: returns true if we should use local mock storage
 const isMockMode = () => _isMockMode();
@@ -404,7 +404,7 @@ function App() {
   }, [tripMeta?.destination]);
 
   const handleLogout = async () => {
-    if (!isMockMode()) {
+    if (!USE_MOCK_MODE) {
       await supabase.auth.signOut();
     } else {
       // Clear session token so other users on this device can't hijack the session
@@ -594,7 +594,7 @@ function App() {
     setShowProfileModal(false);
 
     try {
-      if (isMockMode()) {
+      if (USE_MOCK_MODE) {
         const raw = localStorage.getItem('wandr_mock_users');
         if (raw) {
           const users = JSON.parse(raw);
@@ -669,7 +669,7 @@ function App() {
         membersList.push(currentUser.name);
       }
 
-      if (isMockMode()) {
+      if (USE_MOCK_MODE) {
         MOCK_TRIPS.push({
           id: generatedId,
           name: newTripName,

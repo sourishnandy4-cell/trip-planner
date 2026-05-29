@@ -1,7 +1,8 @@
 // Authentication Service
 // Handles user signup, login, logout
 
-import { supabase, isMockMode } from './supabaseClient';
+import { supabase, USE_MOCK_MODE } from './supabaseClient';
+const isMockMode = () => USE_MOCK_MODE;
 
 // ── Secure password hashing (Web Crypto API — zero dependencies) ──────────────
 const hashPassword = async (password, salt) => {
