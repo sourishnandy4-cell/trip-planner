@@ -15,33 +15,15 @@ const isValidUrl = (url) => {
   }
 };
 
-// Static mock mode: credentials are missing or invalid
-const staticMockMode =
-  !SUPABASE_URL ||
-  !SUPABASE_ANON_KEY ||
-  !isValidUrl(SUPABASE_URL) ||
-  SUPABASE_URL === 'your_supabase_url_here' ||
-  SUPABASE_ANON_KEY === 'your_supabase_anon_key_here' ||
-  SUPABASE_ANON_KEY.length < 100;
+// Static mock mode is permanently disabled to always connect to live cloud
+const staticMockMode = false;
 
-// Runtime connectivity flag — flipped to true the first time a fetch fails
-let _runtimeMockMode = staticMockMode;
-
+// Runtime connectivity fallback is disabled to force live connection
 export const setRuntimeMockMode = () => {
-  if (!_runtimeMockMode) {
-    _runtimeMockMode = true;
-    console.warn('[Wandr] Supabase unreachable — switching to offline mock mode for this session.');
-    // Persist flag so all subsequent reads in this session use mock storage
-    try { sessionStorage.setItem('wandr_supabase_offline', '1'); } catch {}
-  }
+  try { sessionStorage.removeItem('wandr_supabase_offline'); } catch {}
 };
 
-// Restore runtime flag if we already detected offline in this session
-try {
-  if (sessionStorage.getItem('wandr_supabase_offline') === '1') _runtimeMockMode = true;
-} catch {}
-
-export const isMockMode = () => _runtimeMockMode;
+export const isMockMode = () => false;
 
 if (staticMockMode) {
   console.info('[Wandr] No Supabase config — running in offline mock mode.');
