@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, ChevronDown, BellOff, Menu, Loader2, MapPin, DollarSign, Calendar, X } from 'lucide-react';
 import { fetchItinerary } from '../lib/itineraryService';
 import { fetchRecentExpenses } from '../lib/expenseService';
+import { isMockMode } from '../lib/supabaseClient';
 
 export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTrip, onProfileClick, onMenuClick, onNavigate, onSyncToCloud }) => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -126,9 +127,32 @@ export const Header = ({ tripId, tripName, dateRange, user, onLogout, onSwitchTr
                 </button>
               )}
             </div>
-            <span className="inline-block mt-1 px-2.5 py-1 bg-[var(--accent-glow)] text-[var(--accent)] text-xs font-semibold rounded-full whitespace-nowrap">
-              {dateRange}
-            </span>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <span className="inline-block px-2.5 py-1 bg-[var(--accent-glow)] text-[var(--accent)] text-xs font-semibold rounded-full whitespace-nowrap font-sans">
+                {dateRange}
+              </span>
+              {isMockMode() ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.removeItem('wandr_supabase_offline');
+                    window.location.reload();
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-yellow-800 text-[10px] font-extrabold rounded-full shadow-sm cursor-pointer hover:bg-yellow-100/70 transition-all duration-200 whitespace-nowrap select-none font-sans"
+                  title="Wandr is currently offline or blocked by Brave Shields/Adblocker on this device. Click to reconnect to live cloud."
+                  style={{ border: '1px solid rgba(220,180,0,0.25)', background: 'rgba(250,230,150,0.25)' }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span>
+                  Local Mode (Reconnect Cloud)
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-emerald-700 text-[10px] font-extrabold rounded-full shadow-sm whitespace-nowrap select-none font-sans"
+                  style={{ border: '1px solid rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.1)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Cloud Synced
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
