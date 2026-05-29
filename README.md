@@ -21,6 +21,18 @@
 
 ---
 
+## Screenshots
+
+<img width="2932" height="1518" alt="image" src="https://github.com/user-attachments/assets/4ae38601-0aa7-4eb2-99b1-85261a4f688c" />
+<img width="2936" height="1512" alt="image" src="https://github.com/user-attachments/assets/eb1299a6-50dc-4050-b09d-51431b213743" />
+
+
+
+
+
+
+---
+
 ## 🚀 Quick Start (Local Dev)
 
 ```bash
@@ -139,3 +151,14 @@ git push origin feature/your-feature
 ## 📄 License
 
 MIT — free to fork and use for personal or commercial projects.
+
+---
+
+## Acknowledgements
+
+- Google Antigravity 
+- Claude
+- https://github.com/satiricalguru
+- https://github.com/sourishnandy4-cell
+
+
