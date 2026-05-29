@@ -337,9 +337,9 @@ Required JSON format inside the block:
 
 Rules:
 - category_icon must be one of: transport | food | activity | music | accommodation
-- expense category must be one of: Accommodation | Food & Drinks | Transport | Activities | Shopping | Miscellaneous
+- expense category must be one of: Accommodation | Food & Drinks | Activities | Transport (NEVER use 'Shopping' or 'Miscellaneous' as they violate database constraints).
 - Use the trip's actual start_date (${startDate||'use trip start date'}) and end_date (${endDate||'use trip end date'}) for scheduling. Spread activities across the full trip duration.
-- For a FULL trip plan (e.g. "plan 7 days in Japan"), generate ALL days with multiple stops each day.
+- For a FULL trip plan, generate at most 10-12 key activities (spread chronologically across the trip dates) and at most 5-6 core expenses. This avoids hitting token limits or truncating the output, while maintaining high-fidelity quality.
 - To add items, use the \`itinerary\` and \`expenses\` arrays. Always include BOTH arrays even if empty.
 - To delete specific items, add their string IDs (from the data above) to \`deleteItinerary\` or \`deleteExpenses\` arrays.
 - To wipe everything, set \`clearItinerary\` or \`clearExpenses\` to true.
@@ -348,6 +348,7 @@ Rules:
 - Budget update: if the user says "set budget to X", set "updateBudget" to the numeric value (e.g. 700000).
 - ONLY include the <WANDR_ACTION> block when the user explicitly wants to modify their dashboard.
 - Wrap the JSON in <WANDR_ACTION> and </WANDR_ACTION> tags exactly. Output ONLY ONE <WANDR_ACTION> block per response.
+- CRITICAL: Ensure the JSON inside <WANDR_ACTION> is 100% syntactically valid JSON. NEVER include comments, trailing commas, or ellipsis/placeholders (like '...'), as they will crash the JSON parser.
 - CRITICAL: Never put the JSON in a code block (no backticks). Never add any text after the closing </WANDR_ACTION> tag. The block must appear at the very end of your response.
 - CRITICAL: Make sure the <WANDR_ACTION> block is always properly closed with </WANDR_ACTION>. Never output a partial/unclosed block.
 

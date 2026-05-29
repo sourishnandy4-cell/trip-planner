@@ -121,6 +121,10 @@ export const addExpense = async (tripId, expense) => {
   const user = userStr ? JSON.parse(userStr) : null;
   const resolvedPayerId = user?.id || payerId;
 
+  // Safeguard: Ensure paid_by is a valid UUID, otherwise fallback to the current authenticated user's ID
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(resolvedPayerId);
+  const finalPayerId = isUUID ? resolvedPayerId : (user?.id || null);
+
   const { data: newExpense, error: expErr } = await supabase
     .from('expenses')
     .insert([{
@@ -128,7 +132,7 @@ export const addExpense = async (tripId, expense) => {
       description: expense.description,
       amount:      Number(expense.amount),
       category:    expense.category,
-      paid_by:     resolvedPayerId,
+      paid_by:     finalPayerId,
     }])
     .select()
     .single();
@@ -151,8 +155,8 @@ export const addExpense = async (tripId, expense) => {
     expense_id: newExpense.id,
     user_id:    id,
     owed_amount: splitAmount,
-    is_settled: id === payerId,
-    settled_at: id === payerId ? new Date().toISOString() : null,
+    is_settled: id === payerId || id === finalPayerId,
+    settled_at: (id === payerId || id === finalPayerId) ? new Date().toISOString() : null,
   }));
 
   const { error: splitErr } = await supabase
