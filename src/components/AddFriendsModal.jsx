@@ -14,7 +14,7 @@ export const AddFriendsModal = ({ tripId, tripName, onClose, currentFriends = []
     try {
       let trip, members, itinerary, expenses;
 
-      if (isMockMode) {
+      if (isMockMode()) {
         // Mock mode: pull full snapshot from in-memory arrays
         trip      = MOCK_TRIPS.find(t => t.id === tripId);
         members   = MOCK_TRIP_MEMBERS.find(m => m.trip_id === tripId);

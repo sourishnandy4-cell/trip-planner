@@ -12,7 +12,7 @@ export const TripMembers = ({ tripId, tripName, currentUser, tripData = null }) 
   const fetchMembers = async () => {
     setLoading(true);
     try {
-      if (isMockMode) {
+      if (isMockMode()) {
         const { data } = await mockFetchTripMembers(tripId);
         setMembers(data || []);
       } else {
@@ -98,7 +98,7 @@ export const TripMembers = ({ tripId, tripName, currentUser, tripData = null }) 
 
       {/* Members Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isMockMode ? (
+        {isMockMode() ? (
           // Mock mode: Display member names as strings
           members.map((memberName, index) => (
             <div
@@ -193,7 +193,7 @@ export const TripMembers = ({ tripId, tripName, currentUser, tripData = null }) 
           tripName={tripName}
           tripData={tripData}
           onClose={handleModalClose}
-          currentFriends={isMockMode ? members : members.map(m => m.name)}
+          currentFriends={isMockMode() ? members : members.map(m => m.name)}
         />
       )}
     </div>

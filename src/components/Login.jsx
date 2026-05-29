@@ -49,7 +49,7 @@ export const Login = ({ onLoginSuccess }) => {
     setLoading(true);
     try {
       const { currencySymbol, currencyCode } = getRegionDetails(region);
-      if (isMockMode) {
+      if (isMockMode()) {
         let result;
         if (isSignUp) {
           result = await signUp({ email, password, username: name });
@@ -250,7 +250,7 @@ export const Login = ({ onLoginSuccess }) => {
 
 
       {/* Demo mode banner */}
-      {isMockMode && (
+      {isMockMode() && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 w-full max-w-lg px-4 z-20">
           <div className="flex items-start gap-2 rounded-2xl px-4 py-2.5 text-amber-200 text-xs"
             style={{ background:'rgba(120,80,0,0.55)', border:'1px solid rgba(251,191,36,0.35)', backdropFilter:'blur(12px)' }}>
@@ -407,7 +407,7 @@ export const Login = ({ onLoginSuccess }) => {
 
         {/* Footer note */}
         <p className="text-[10px] text-white/35 text-center">
-          {isMockMode
+          {isMockMode()
             ? '🔒 Password hashed with SHA-256 — never sent anywhere'
             : '🔒 Secured by Supabase Auth'}
         </p>

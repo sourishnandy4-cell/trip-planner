@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, Header, ItineraryTimeline, BudgetPieChart, RecentExpenses, BalanceSheet, Login, ProfileModal, TravelDocs, AIAssistant, TripMembers, MapView, WeatherView, LoadingScreen, CursorPlane } from './components';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
-import { supabase, isMockMode } from './lib/supabaseClient';
+import { supabase, isMockMode as _isMockMode, setRuntimeMockMode } from './lib/supabaseClient';
+
+// Helper: returns true if we should use local mock storage
+const isMockMode = () => _isMockMode();
 import {
   MOCK_TRIPS,
   MOCK_TRIP_MEMBERS,
@@ -78,7 +81,7 @@ function App() {
     if (!currentUser) return;
     setTripsLoading(true);
     try {
-      if (isMockMode) {
+      if (isMockMode()) {
         // Filter mock trips where current user is a member
         const myTrips = MOCK_TRIPS.filter(trip => {
           const membersEntry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === trip.id);
@@ -89,10 +92,23 @@ function App() {
         // First get the trip IDs the user is a member of
         let tripIds = [];
         if (currentUser.id) {
-          const { data: memberData } = await supabase
+          const { data: memberData, error: memberErr } = await supabase
             .from('trip_members')
             .select('trip_id')
             .eq('user_id', currentUser.id);
+          
+          if (memberErr) {
+            const isNet = memberErr.message?.includes('fetch') || memberErr.message?.includes('Failed to fetch') || memberErr.message?.includes('Network');
+            if (isNet) {
+              setRuntimeMockMode();
+              const myTrips = MOCK_TRIPS.filter(trip => {
+                const membersEntry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === trip.id);
+                return membersEntry && membersEntry.members.includes(currentUser.name);
+              });
+              setExistingTrips(myTrips);
+              return;
+            }
+          }
           if (memberData) tripIds = memberData.map(m => m.trip_id);
         }
 
@@ -109,7 +125,20 @@ function App() {
         }
 
         const { data, error } = await query;
-        if (!error && data) {
+        if (error) {
+          const isNet = error.message?.includes('fetch') || error.message?.includes('Failed to fetch') || error.message?.includes('Network');
+          if (isNet) {
+            setRuntimeMockMode();
+            const myTrips = MOCK_TRIPS.filter(trip => {
+              const membersEntry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === trip.id);
+              return membersEntry && membersEntry.members.includes(currentUser.name);
+            });
+            setExistingTrips(myTrips);
+            return;
+          }
+          throw error;
+        }
+        if (data) {
           // Merge in any locally-imported trips (joined via invite link) that aren't
           // already returned by Supabase (e.g. friend opened a ?join= link).
           const supabaseIds = new Set(data.map(t => t.id));
@@ -123,6 +152,14 @@ function App() {
       }
     } catch (err) {
       console.error('Failed to load existing trips:', err);
+      // On network failure, surface any locally saved trips so the user isn't left with nothing
+      try {
+        const localTrips = MOCK_TRIPS.filter(trip => {
+          const entry = MOCK_TRIP_MEMBERS.find(m => m.trip_id === trip.id);
+          return entry && entry.members.includes(currentUser.name);
+        });
+        if (localTrips.length > 0) setExistingTrips(localTrips);
+      } catch {}
     } finally {
       setTripsLoading(false);
     }
@@ -134,7 +171,7 @@ function App() {
     if (!confirmDelete) return;
 
     try {
-      if (isMockMode) {
+      if (isMockMode()) {
         await mockDeleteTrip(tripId);
       } else {
         const { error } = await supabase
@@ -230,7 +267,7 @@ function App() {
           return;
         }
         try {
-          if (isMockMode) {
+          if (isMockMode()) {
             alert('This invite link is outdated. Ask the trip organiser to share a new link from the Members tab.');
             clearPending();
             return;
@@ -270,7 +307,7 @@ function App() {
     if (!activeTripId) return;
 
     // Validate UUID format when not in mock mode to handle legacy mock IDs in localStorage
-    if (!isMockMode) {
+    if (!isMockMode()) {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(activeTripId)) {
         console.warn('Wandr: Detected invalid activeTripId UUID, clearing session:', activeTripId);
@@ -285,7 +322,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      if (isMockMode) {
+      if (isMockMode()) {
         const { data } = await mockFetchTripMeta(activeTripId);
         if (!data) {
           setError('Trip not found. It may have been deleted.');
@@ -303,6 +340,16 @@ function App() {
 
         if (fetchErr) {
           console.error('Fetch trip error:', fetchErr);
+          const isNet = fetchErr.message?.includes('fetch') || fetchErr.message?.includes('Failed to fetch') || fetchErr.message?.includes('Network');
+          if (isNet) {
+            setRuntimeMockMode();
+            const localTrip = MOCK_TRIPS.find(t => t.id === activeTripId);
+            if (localTrip) {
+              setTripMeta(localTrip);
+              setLoading(false);
+              return;
+            }
+          }
           setError('Failed to load trip: ' + (fetchErr.message || 'Unknown error'));
           return;
         }
@@ -327,6 +374,13 @@ function App() {
       }
     } catch (err) {
       console.error('Unexpected error loading trip:', err);
+      const isNet = err instanceof TypeError || err.message?.includes('fetch');
+      if (isNet) {
+        setRuntimeMockMode();
+        // Retry from local storage
+        const localTrip = MOCK_TRIPS.find(t => t.id === activeTripId);
+        if (localTrip) { setTripMeta(localTrip); setLoading(false); return; }
+      }
       setError('An unexpected error occurred while loading trip details.');
     } finally {
       setLoading(false);
@@ -364,7 +418,7 @@ function App() {
   }, [tripMeta?.destination]);
 
   const handleLogout = async () => {
-    if (!isMockMode) {
+    if (!isMockMode()) {
       await supabase.auth.signOut();
     } else {
       // Clear session token so other users on this device can't hijack the session
@@ -397,7 +451,7 @@ function App() {
     setShowProfileModal(false);
 
     try {
-      if (isMockMode) {
+      if (isMockMode()) {
         const raw = localStorage.getItem('wandr_mock_users');
         if (raw) {
           const users = JSON.parse(raw);
@@ -461,7 +515,7 @@ function App() {
         membersList.push(currentUser.name);
       }
 
-      if (isMockMode) {
+      if (isMockMode()) {
         MOCK_TRIPS.push({
           id: generatedId,
           name: newTripName,
@@ -531,7 +585,52 @@ function App() {
       setNewBudget('');
       setNewTripMembers(currentUser?.name || '');
     } catch (err) {
-      setOnboardingError(err.message || 'Failed to initialize trip record.');
+      // Network-level failures (Supabase paused / offline) — fall back to local mock storage
+      const isNetworkError =
+        err instanceof TypeError ||
+        err.message === 'Failed to fetch' ||
+        err.message?.includes('Failed to fetch') ||
+        err.message?.includes('NetworkError') ||
+        err.message?.includes('fetch');
+
+      if (isNetworkError) {
+        console.warn('[Wandr] Supabase unreachable — saving trip locally instead.', err);
+        setRuntimeMockMode();
+        try {
+          const membersList2 = newTripMembers
+            .split(',')
+            .map(m => m.trim())
+            .filter(m => m.length > 0);
+          if (membersList2.length === 0) membersList2.push(currentUser.name);
+
+          const fallbackId = 'trip-' + Date.now();
+          MOCK_TRIPS.push({
+            id: fallbackId,
+            name: newTripName,
+            destination: newDestination,
+            start_date: newStartDate,
+            end_date: newEndDate,
+            total_budget: Number(newBudget),
+          });
+          MOCK_TRIP_MEMBERS.push({ trip_id: fallbackId, members: membersList2 });
+          saveMockData();
+
+          localStorage.setItem('wandr_active_trip_id', fallbackId);
+          setActiveTripId(fallbackId);
+
+          setNewTripName('');
+          setNewDestination('');
+          setNewStartDate('');
+          setNewEndDate('');
+          setNewBudget('');
+          setNewTripMembers(currentUser?.name || '');
+          return; // success via fallback — no error shown
+        } catch (fallbackErr) {
+          setOnboardingError('Could not reach the server and local save also failed. Please refresh and try again.');
+        }
+      } else {
+        setOnboardingError(err.message || 'Failed to initialize trip record.');
+      }
     } finally {
       setOnboardingSubmitting(false);
     }
@@ -553,7 +652,7 @@ function App() {
       <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 font-sans" style={{ background: 'var(--bg-gradient)' }}>
 
         {/* Demo Mode Banner */}
-        {isMockMode && (
+        {isMockMode() && (
           <div className="w-full max-w-4xl mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-amber-800 text-xs">
             <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-500" />
             <span><strong>Demo Mode</strong> — You're in demo mode. Data is saved locally on this device only. Nothing is backed up to a cloud server.</span>
@@ -820,7 +919,7 @@ function App() {
       <CursorPlane />
 
       {/* ── Demo Mode Banner (sticky, always visible in mock mode) ── */}
-      {isMockMode && (
+      {isMockMode() && (
         <div className="w-full flex items-center gap-2 border-b px-4 py-2 text-xs" style={{ background: 'var(--accent-glow)', borderColor: 'var(--accent-warm)', color: 'var(--text-secondary)' }}>
           <Info className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--accent-warm)' }} />
           <span>

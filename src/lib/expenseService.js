@@ -12,7 +12,7 @@ import {
 
 /** Fetch the last 10 expenses for a trip. */
 export const fetchRecentExpenses = async (tripId) => {
-  if (isMockMode) return mockFetchRecentExpenses(tripId);
+  if (isMockMode()) return mockFetchRecentExpenses(tripId);
 
   const { data, error } = await supabase
     .from('expenses')
@@ -44,7 +44,7 @@ export const fetchRecentExpenses = async (tripId) => {
 
 /** Fetch aggregated category totals for the budget chart. */
 export const fetchCategoryTotals = async (tripId) => {
-  if (isMockMode) return mockFetchCategoryTotals(tripId);
+  if (isMockMode()) return mockFetchCategoryTotals(tripId);
 
   const { data, error } = await supabase
     .from('expenses')
@@ -72,7 +72,7 @@ export const fetchCategoryTotals = async (tripId) => {
 
 /** Fetch all member names associated with a trip. */
 export const fetchTripMembers = async (tripId) => {
-  if (isMockMode) {
+  if (isMockMode()) {
     const res = await mockFetchTripMembers(tripId);
     if (!res.data) return res;
     return { data: res.data.map(name => ({ id: name, name })), error: null };
@@ -104,7 +104,7 @@ export const addExpense = async (tripId, expense) => {
   // In mock mode paid_by is already a display name; in Supabase mode resolve to UUID
   const payerId = expense.paid_by;
 
-  if (isMockMode) {
+  if (isMockMode()) {
     const { data: tripMembers } = await mockFetchTripMembers(tripId);
     const activeMembers = tripMembers?.length ? tripMembers : [payerId || 'Traveller'];
     const splitAmount   = Number((expense.amount / activeMembers.length).toFixed(2));
@@ -169,7 +169,7 @@ export const addExpense = async (tripId, expense) => {
 
 /** Update the total budget for a trip. */
 export const updateTripBudget = async (tripId, newBudget) => {
-  if (isMockMode) return mockUpdateTripBudget(tripId, newBudget);
+  if (isMockMode()) return mockUpdateTripBudget(tripId, newBudget);
 
   const { data, error } = await supabase
     .from('trips')
@@ -187,7 +187,7 @@ export const updateTripBudget = async (tripId, newBudget) => {
 
 /** Mark all unsettled balances for a trip as settled. */
 export const settleBalances = async (tripId) => {
-  if (isMockMode) return mockSettleBalances(tripId);
+  if (isMockMode()) return mockSettleBalances(tripId);
 
   const { data: expenses, error: fetchErr } = await supabase
     .from('expenses')
@@ -216,7 +216,7 @@ export const settleBalances = async (tripId) => {
 };
 
 export const deleteExpense = async (expenseId) => {
-  if (isMockMode) return mockDeleteExpense(expenseId);
+  if (isMockMode()) return mockDeleteExpense(expenseId);
 
   // Supabase takes care of cascade deleting splits via foreign key constraints
   const { data, error } = await supabase
@@ -233,7 +233,7 @@ export const deleteExpense = async (expenseId) => {
 };
 
 export const clearExpenses = async (tripId) => {
-  if (isMockMode) return mockClearExpenses(tripId);
+  if (isMockMode()) return mockClearExpenses(tripId);
 
   const { data, error } = await supabase
     .from('expenses')

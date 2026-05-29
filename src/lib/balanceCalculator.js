@@ -23,7 +23,7 @@ const buildDisplayNameMap = () => {
  * @returns {Promise<{data: Array<{from: string, to: string, amount: number}>|null, error: any}>}
  */
 export const calculateNetBalances = async (tripId) => {
-  if (isMockMode) {
+  if (isMockMode()) {
     return mockCalculateNetBalances(tripId);
   }
 

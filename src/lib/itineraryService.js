@@ -10,7 +10,7 @@ import {
  * Fetch all itinerary items for a trip, ordered chronologically.
  */
 export const fetchItinerary = async (tripId) => {
-  if (isMockMode) {
+  if (isMockMode()) {
     return mockFetchItinerary(tripId);
   }
 
@@ -31,7 +31,7 @@ export const fetchItinerary = async (tripId) => {
  * Add a new itinerary activity for a trip.
  */
 export const addItineraryItem = async (tripId, item) => {
-  if (isMockMode) {
+  if (isMockMode()) {
     return mockAddItineraryItem(tripId, item);
   }
 
@@ -60,7 +60,7 @@ export const addItineraryItem = async (tripId, item) => {
 };
 
 export const deleteItineraryItem = async (itemId) => {
-  if (isMockMode) return mockDeleteItineraryItem(itemId);
+  if (isMockMode()) return mockDeleteItineraryItem(itemId);
 
   const { data, error } = await supabase
     .from('itinerary_items')
@@ -76,7 +76,7 @@ export const deleteItineraryItem = async (itemId) => {
 };
 
 export const clearItinerary = async (tripId) => {
-  if (isMockMode) return mockClearItinerary(tripId);
+  if (isMockMode()) return mockClearItinerary(tripId);
 
   const { data, error } = await supabase
     .from('itinerary_items')

@@ -148,7 +148,7 @@ export const ItineraryTimeline = ({ tripId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa
     if (!window.confirm('Delete this activity from the itinerary?')) return;
     setDeletingId(itemId);
     try {
-      if (isMockMode) {
+      if (isMockMode()) {
         const idx = MOCK_ITINERARY_ITEMS.findIndex(i => i.id === itemId);
         if (idx !== -1) { MOCK_ITINERARY_ITEMS.splice(idx, 1); saveMockData(); }
       } else {
