@@ -296,10 +296,24 @@ export const Login = ({ onLoginSuccess }) => {
 
         {/* Error */}
         {error && (
-          <div className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-xs text-red-200"
+          <div className="flex flex-col gap-2 rounded-xl px-3 py-2.5 text-xs text-red-200"
             style={{background:'rgba(180,0,0,0.35)', border:'1px solid rgba(255,100,100,0.3)'}}>
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-300" />
-            <span>{error}</span>
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-300" />
+              <span>{error}</span>
+            </div>
+            {isMockMode() && (
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.removeItem('wandr_supabase_offline');
+                  window.location.reload();
+                }}
+                className="mt-1 text-[10px] text-sky-300 hover:text-sky-200 underline text-left font-semibold cursor-pointer"
+              >
+                Are you looking for your live cloud account? Click here to reconnect to Supabase.
+              </button>
+            )}
           </div>
         )}
 
