@@ -321,7 +321,6 @@ function App() {
         if (fetchErr) {
           console.error('Fetch trip error:', fetchErr);
           if (isNetworkError(fetchErr)) {
-            setDbConnected(false);
             setRuntimeMockMode();
             const localTrip = MOCK_TRIPS.find(t => t.id === activeTripId);
             if (localTrip) {
@@ -442,7 +441,7 @@ function App() {
     setShowProfileModal(false);
 
     try {
-      if (USE_MOCK_MODE) {
+      if (isMockMode()) {
         const raw = localStorage.getItem('wandr_mock_users');
         if (raw) {
           const users = JSON.parse(raw);
@@ -517,7 +516,7 @@ function App() {
         membersList.push(currentUser.name);
       }
 
-      if (USE_MOCK_MODE) {
+      if (isMockMode()) {
         MOCK_TRIPS.push({
           id: generatedId,
           name: newTripName,

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mail, Lock, User, ArrowRight, AlertCircle, Globe, UserCheck, Eye, EyeOff } from 'lucide-react';
-import { supabase, USE_MOCK_MODE, getFriendlyErrorMessage } from '../lib/supabaseClient';
-const isMockMode = () => USE_MOCK_MODE;
+import { supabase, isMockMode, getFriendlyErrorMessage } from '../lib/supabaseClient';
 import { login, signUp } from '../lib/authService';
 
 const getRegionDetails = (regionCode) => {
