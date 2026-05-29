@@ -889,15 +889,7 @@ export const TravelDocs = ({ tripId, currentUser, tripDestination }) => {
     if (savedNotes) {
       setNotes(JSON.parse(savedNotes));
     } else {
-      setNotes([
-        {
-          id: 'note-2',
-          title: 'Flight Booking Reference',
-          content: 'Airline: Iberia (IB3014)\nConfirmation Code: Z8Y8XP\nDeparting: 10:45 AM',
-          category: 'ticket',
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        },
-      ]);
+      setNotes([]);
     }
 
     const savedPacking = localStorage.getItem(`wandr_packing_${tripId}`);
