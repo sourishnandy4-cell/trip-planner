@@ -1373,15 +1373,5 @@ body {
   }
 }
 
-/* Mobile touch plane — slightly bigger, glowy ring on active */
-.cursor-plane.touch-plane {
-  font-size: 2rem;
-  filter:
-    drop-shadow(0 0 8px var(--cursor-glow, rgba(212,115,110,0.6)))
-    drop-shadow(0 0 18px var(--cursor-glow, rgba(212,115,110,0.3)));
-  transition: opacity 0.4s ease;
-}
-
-.cursor-plane.touch-plane.visible {
-  opacity: 0.92;
-}
+/* Mobile touch plane — disabled, removed */
+.cursor-plane.touch-plane { display: none; }
