@@ -5,6 +5,14 @@ import { supabase, isMockMode as _isMockMode, setRuntimeMockMode, USE_MOCK_MODE,
 
 // Helper: returns true if we should use local mock storage
 const isMockMode = (ignoreActiveTripId = false) => _isMockMode(ignoreActiveTripId);
+
+// Helper to race a promise against a timeout to prevent hanging connections
+const withTimeout = (promise, ms = 2500) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new TypeError('Network request timed out')), ms))
+  ]);
+};
 import {
   MOCK_TRIPS,
   MOCK_TRIP_MEMBERS,
@@ -94,10 +102,10 @@ function App() {
         // First get the trip IDs the user is a member of
         let tripIds = [];
         if (currentUser.id) {
-          const { data: memberData, error: memberErr } = await supabase
+          const { data: memberData, error: memberErr } = await withTimeout(supabase
             .from('trip_members')
             .select('trip_id')
-            .eq('user_id', currentUser.id);
+            .eq('user_id', currentUser.id), 2500);
           
           if (memberErr) {
             if (isNetworkError(memberErr)) {
@@ -124,7 +132,7 @@ function App() {
            }
         }
 
-        const { data, error } = await query;
+        const { data, error } = await withTimeout(query, 2500);
         if (error) {
           if (isNetworkError(error)) {
             const myTrips = MOCK_TRIPS.filter(trip => {
@@ -724,7 +732,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Start Date *</label>
                   <div className="relative">
